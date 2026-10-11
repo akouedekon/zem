@@ -3,7 +3,7 @@
 MVP de formalisation des conducteurs de taxi-moto au Bénin.
 
 ## Architecture
-- API : Java 21, Spring Boot 3, Spring Security, Spring Data JPA, Flyway
+- API : Java 17, Spring Boot 3, Spring Security, Spring Data JPA, Flyway
 - Base : PostgreSQL
 - Web : Next.js / TypeScript
 - Mobile : Flutter
