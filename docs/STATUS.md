@@ -3,7 +3,7 @@
 ## Initialisation
 - [x] Dépôt GitHub identifié (branche main, dépôt initialement vide).
 - [x] Documentation de cadrage et fichiers initiaux.
-- [ ] API Java 21 / Spring Boot démarrable et testée.
+- [ ] API Java 17 / Spring Boot démarrable et testée.
 - [ ] Migrations PostgreSQL appliquées.
 - [ ] Authentification et contrôle des rôles.
 - [ ] Web Next.js fonctionnel.
