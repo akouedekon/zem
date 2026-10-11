@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/zem}
+    username: ${POSTGRES_USER:zem}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+zem:
+  storage: ${ZEM_STORAGE:./private-storage}
+  public-url: ${ZEM_PUBLIC_URL:http://localhost:3000}
+  bootstrap-email: ${ZEM_ADMIN_EMAIL:}
+  bootstrap-password: ${ZEM_ADMIN_PASSWORD:}
