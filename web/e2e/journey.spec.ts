@@ -1,0 +1,46 @@
+import { test, expect } from '@playwright/test';
+test('driver submission, administrative rejection, correction, approval and public revocation', async ({ browser }) => {
+  const driver = await browser.newContext(); const admin = await browser.newContext();
+  const page = await driver.newPage(); const review = await admin.newPage();
+  const email = `driver-${Date.now()}@zem.test`;
+  const fullName = `Conducteur E2E ${Date.now()}`;
+  await page.goto('/'); await page.getByRole('button', { name: 'Créer un compte conducteur', exact: true }).click();
+  await page.getByLabel('Adresse e-mail').fill(email); await page.getByLabel('Mot de passe').fill('Driver-test-password-17');
+  await page.getByRole('button', { name: 'Créer le compte', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Mon dossier' })).toBeVisible();
+  const cookies = await driver.cookies();
+  expect(cookies.find(c => c.name === 'zem_session')?.httpOnly).toBe(true);
+  expect(await page.evaluate(() => document.cookie)).not.toContain('zem_session');
+  await page.getByLabel('Nom complet').fill(fullName); await page.getByLabel('Téléphone').fill('+2290102030405'); await page.getByLabel('Immatriculation').fill('E2E 1234');
+  await page.getByRole('button', { name: 'Enregistrer le dossier' }).click();
+  await expect(page.getByRole('status')).toContainText('Dossier enregistré');
+  for (const label of ['Pièce d’identité', 'Permis de conduire', 'Justificatif du véhicule']) {
+    await page.getByLabel(label, { exact: true }).setInputFiles({ name: 'synthetic.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nsynthetic e2e document') });
+    await expect(page.getByRole('status')).toContainText('Justificatif enregistré');
+  }
+  await page.getByRole('button', { name: 'Soumettre à la revue' }).click(); await expect(page.getByText('En cours de revue', { exact: true })).toBeVisible();
+  const forbidden = await page.request.post('/bff/driver/dossier/submit', { headers: { Origin: 'https://evil.test' } }); expect(forbidden.status()).toBe(403);
+  await review.goto('/'); await review.getByLabel('Adresse e-mail').fill('admin@zem.test'); await review.getByLabel('Mot de passe').fill('Admin-test-password-17');
+  await review.getByRole('button', { name: 'Se connecter', exact: true }).click();
+  await review.getByRole('button', { name: fullName }).click();
+  await expect(review.getByRole('link', { name: 'Télécharger pour examen' })).toHaveCount(3);
+  await review.getByLabel('Motif').fill('Document à remplacer'); await review.getByRole('button', { name: 'Rejeter', exact: true }).click();
+  await expect(review.getByRole('status')).toContainText('Dossier rejeté');
+  await page.reload(); await expect(page.getByText('Motif du rejet : Document à remplacer')).toBeVisible();
+  await page.getByLabel('Pièce d’identité', { exact: true }).setInputFiles({ name: 'corrected.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\ncorrected synthetic e2e document') });
+  await expect(page.getByRole('status')).toContainText('Justificatif enregistré');
+  await page.getByRole('button', { name: 'Soumettre à la revue' }).click(); await expect(page.getByText('En cours de revue', { exact: true })).toBeVisible();
+  await review.reload(); await review.getByRole('button', { name: fullName }).click();
+  await review.getByRole('button', { name: 'Valider et délivrer la carte' }).click(); await expect(review.getByRole('status')).toContainText('carte numérique délivrée');
+  await page.reload(); await expect(page.getByRole('img', { name: 'QR de vérification de la carte' })).toBeVisible();
+  const qr = await page.request.get('/bff/driver/card/qr'); expect(qr.status()).toBe(200); expect(qr.headers()['content-type']).toContain('image/png');
+  const link = await page.getByRole('link', { name: 'Vérifier la validité' }).getAttribute('href'); expect(link).toBeTruthy();
+  const publicPage = await browser.newPage(); await publicPage.goto(link!); await expect(publicPage.getByRole('heading', { name: 'Carte valide', exact: true })).toBeVisible();
+  await expect(publicPage.locator('body')).not.toContainText(fullName);
+  await review.getByRole('combobox').selectOption('APPROVED'); await review.getByRole('button', { name: fullName }).click();
+  await review.getByLabel('Motif de révocation').fill('Révocation de test'); await review.getByRole('button', { name: 'Révoquer la carte' }).click(); await expect(review.getByRole('status')).toContainText('Carte révoquée');
+  await publicPage.reload(); await expect(publicPage.getByRole('heading', { name: 'Carte non valide', exact: true })).toBeVisible();
+  await expect(publicPage.getByText('Cette carte a été révoquée.')).toBeVisible();
+  await page.getByRole('button', { name: 'Se déconnecter' }).click(); await expect(page.getByRole('heading', { name: 'Accéder à mon espace' })).toBeVisible();
+  await driver.close(); await admin.close(); await publicPage.close();
+});
