@@ -22,10 +22,11 @@ public class AuthService implements ApplicationRunner {
     private final JdbcTemplate db;
     private final PasswordEncoder encoder;
     private final String dummyHash;
+    private final UserRepository users;
     @Value("${zem.bootstrap-email}") private String adminEmail;
     @Value("${zem.bootstrap-password}") private String adminPassword;
-    AuthService(JdbcTemplate db, PasswordEncoder encoder) {
-        this.db=db; this.encoder=encoder; this.dummyHash=encoder.encode(Tokens.random());
+    AuthService(JdbcTemplate db, PasswordEncoder encoder, UserRepository users) {
+        this.db=db; this.encoder=encoder; this.users=users; this.dummyHash=encoder.encode(Tokens.random());
     }
     static String normalize(String email) { return email.trim().toLowerCase(Locale.ROOT); }
     static void checkPassword(String password) {
@@ -43,18 +44,17 @@ public class AuthService implements ApplicationRunner {
     }
     @Transactional
     public Auth login(Login request) {
-        var rows=db.query("SELECT * FROM app_user WHERE email=?",(rs,n)->new Account(
-                new User(rs.getObject("id",UUID.class),rs.getString("email"),rs.getString("role")),
-                rs.getString("password_hash")),normalize(request.email()));
-        String hash=rows.isEmpty()?dummyHash:rows.get(0).hash();
+        var account=users.findByEmail(normalize(request.email()));
+        String hash=account.map(UserEntity::passwordHash).orElse(dummyHash);
         boolean matches=request.password().getBytes(StandardCharsets.UTF_8).length<=72
                 && encoder.matches(request.password(),hash);
-        if(!matches || rows.isEmpty()) throw new ResponseStatusException(UNAUTHORIZED,"Identifiants incorrects");
+        if(!matches || account.isEmpty()) throw new ResponseStatusException(UNAUTHORIZED,"Identifiants incorrects");
+        User user=account.get().publicUser();
         String token=Tokens.random(); OffsetDateTime expiry=OffsetDateTime.now().plusHours(8);
         db.update("INSERT INTO auth_session(token_hash,user_id,expires_at) VALUES (?,?,?)",
-                Tokens.hash(token),rows.get(0).user().id(),expiry);
+                Tokens.hash(token),user.id(),expiry);
         db.update("DELETE FROM auth_session WHERE expires_at <= now()");
-        return new Auth(token,expiry,rows.get(0).user());
+        return new Auth(token,expiry,user);
     }
     public Optional<User> authenticate(String token) {
         if(!token.matches("[A-Za-z0-9_-]{43}")) return Optional.empty();
@@ -72,5 +72,4 @@ public class AuthService implements ApplicationRunner {
         var roles=db.queryForList("SELECT role FROM app_user WHERE email=?",String.class,normalize(adminEmail));
         if(!roles.contains("ADMIN")) throw new IllegalStateException("Cette adresse appartient déjà à un conducteur");
     }
-    private record Account(User user, String hash) {}
 }
