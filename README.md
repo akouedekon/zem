@@ -10,9 +10,15 @@ MVP de formalisation des conducteurs de taxi-moto au Bénin.
 - Infrastructure : VPS, Docker Compose, reverse proxy HTTPS
 
 ## Démarrage
-Le socle initial est en cours de construction. Ne pas utiliser avec des données personnelles réelles avant audit de sécurité et validation juridique.
+Le parcours MVP est implémenté : compte conducteur, justificatifs privés, soumission, revue administrative, rejet/correction, validation, carte et QR public, révocation. Aucune intégration Supabase, paiement ou assurance.
+
+Copier `.env.example` vers `.env`, renseigner le mot de passe PostgreSQL et le compte administrateur initial, puis lancer `docker compose up -d --build`. Interface locale : http://localhost:8088. Instructions détaillées et HTTPS VPS : [runbook](docs/RUNBOOK.md).
+
+Ne pas utiliser avec des données personnelles réelles avant audit de sécurité et validation juridique.
 
 ## Priorité MVP
 Inscription conducteur → dépôt de dossier → instruction administrative → carte numérique → vérification QR.
 
 Voir [le plan](docs/STATUS.md).
+
+Voir aussi [l’API](docs/API.md), [les contrôles et limites de sécurité](docs/SECURITY.md), et [la CI](.github/workflows/verify.yml). Le mobile Flutter est l’espace conducteur ; la revue administrative s’effectue sur le web.
