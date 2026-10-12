@@ -19,7 +19,7 @@ Le mot de passe comporte au moins 12 caractères et au plus 72 octets UTF-8, lim
 |---|---|---|
 | GET / PUT | `/driver/dossier` | Lecture / `{fullName,phone,plate}`. Un dossier par compte. |
 | GET | `/driver/documents` | Métadonnées privées : `{id,kind,mediaType,byteSize}`. |
-| POST | `/driver/documents/{kind}` | Multipart `file`, 5 Mo max. IDENTITY, DRIVING_LICENSE ou VEHICLE. |
+| POST | `/driver/documents/{kind}` | Multipart `file`, 3 Mo max. IDENTITY, DRIVING_LICENSE ou VEHICLE. |
 | POST | `/driver/dossier/submit` | Exige les trois justificatifs. |
 | GET | `/driver/card` | Carte privée, lien public opaque, dates et éventuelle révocation. |
 | GET | `/driver/card/qr` | PNG du QR. |

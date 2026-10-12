@@ -2,7 +2,7 @@
 
 ## Local avec Docker
 
-Prérequis : Docker et Compose ≥ 2.24.4 (le profil VPS utilise `!override`). Depuis la racine :
+Prérequis : Docker et Compose ≥ 2.24.4. Depuis la racine :
 
 ```sh
 cp .env.example .env
@@ -49,22 +49,12 @@ L’APK debug vise l’émulateur Android : `10.0.2.2` représente l’ordinateu
 
 La version de diffusion doit employer un keystore de production et HTTPS. Aucune signature de release n’est configurée et aucun repli sur la clé debug n’est permis : ne pas distribuer une release avant configuration de signature. Le HTTP est permis seulement dans le manifeste debug ; release refuse le trafic clair et le client exige HTTPS. Sur cette machine, Flutter choisissait un GraalVM dont jlink échouait : le build a été lancé via le wrapper Gradle avec `-Dorg.gradle.java.home=<Temurin 17>` ; ne pas modifier le JDK global sans besoin.
 
-## VPS et HTTPS
+## Hébergement gratuit
 
-Préparer le domaine pointant vers le VPS, Docker/Compose, pare-feu (SSH, 80, 443 uniquement), disque privé chiffré et une clé SSH restreinte. Modifier les deux `server_name` et la redirection de infra/nginx.vps.conf. Fournir un certificat valide et sa clé dans infra/tls/fullchain.pem et infra/tls/privkey.pem (hors Git). Définir WEB_ORIGIN=https://votre-domaine. L’origine doit correspondre exactement à l’URL du navigateur ; ne pas utiliser localhost ni un autre port.
-
-```sh
-docker compose -f compose.yml -f compose.vps.yml config -q
-docker compose -f compose.yml -f compose.vps.yml build
-docker compose -f compose.yml -f compose.vps.yml up -d
-docker compose -f compose.yml -f compose.vps.yml exec -T nginx nginx -t
-curl --fail https://votre-domaine/api/health
-```
-
-Le profil local n’écoute que sur 127.0.0.1:8088 ; le profil VPS publie 80/443. Aucun port DB ou API n’est exposé. Organiser le renouvellement du certificat et recharger Nginx après renouvellement. Valider le parcours complet depuis le domaine réel et un appareil Android avant toute mise en service. Aucun accès VPS n’est fourni dans cette demande et aucun déploiement distant n’a été effectué.
+Le VPS est abandonné. Suivre [FREE_HOSTING.md](FREE_HOSTING.md) : Render Free, Netlify Free et Neon Free. Les fichiers compose.vps.yml et nginx.vps.conf sont historiques, conservés pour le contrôle local TLS ; ne pas les utiliser pour le déploiement prévu.
 
 ## Sauvegarde et récupération
 
-Prérequis Linux : docker, age, jq, tar et sha256sum. Maintenir une copie chiffrée hors VPS et l’identité de déchiffrement hors VPS. `AGE_RECIPIENT=<clé publique age> bash infra/backup.sh /chemin-protege/zem-<date>.age` depuis la racine crée un snapshot cohérent en interrompant brièvement l’API. L’archive associe dump PostgreSQL, volume documentaire et sommes SHA-256. Si un profil VPS est utilisé, arrêter/démarrer l’API avec les mêmes fichiers Compose ; ses propriétés sont identiques dans les deux profils.
+Prérequis Linux : docker, age, jq, tar et sha256sum. Maintenir une copie chiffrée et l’identité de déchiffrement séparées de la machine source. `AGE_RECIPIENT=<clé publique age> bash infra/backup.sh /chemin-protege/zem-<date>.age` depuis la racine crée un snapshot cohérent en interrompant brièvement l’API. L’archive associe dump PostgreSQL (dont les nouveaux documents), volume documentaire historique et sommes SHA-256. Ces scripts concernent seulement Compose local ; pour Neon, voir FREE_HOSTING.md.
 
 `AGE_IDENTITY=/chemin-protege/identite.txt bash infra/restore-check.sh /chemin-protege/zem-<date>.age` sur un hôte de récupération restaure dans un nouveau conteneur sans réseau ni ports publiés. Le script vérifie les sommes et la restauration PostgreSQL, puis détruit uniquement ce conteneur de test. Il ne restaure pas la production. Pour une reprise réelle : maintenance, nouvelle base et nouveau volume de documents, restauration des deux archives correspondantes, vérification des cartes/documents, invalidation des sessions (`DELETE FROM auth_session`), puis bascule contrôlée. Ne jamais restaurer uniquement la base sans ses fichiers associés.

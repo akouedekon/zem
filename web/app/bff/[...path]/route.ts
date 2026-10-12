@@ -19,15 +19,15 @@ async function handle(req: NextRequest, context: { params: Promise<{ path: strin
   const type = req.headers.get('content-type');
   if (type) headers.set('Content-Type', type);
   const declaredLength = Number(req.headers.get('content-length') || 0);
-  if (declaredLength > 6 * 1024 * 1024) return NextResponse.json({ message: 'Fichier trop volumineux' }, { status: 413 });
+  if (declaredLength > 4 * 1024 * 1024) return NextResponse.json({ message: 'Fichier trop volumineux' }, { status: 413 });
   let body: ArrayBuffer | undefined;
-  try { body = method === 'GET' ? undefined : await readLimitedBody(req.body, 6 * 1024 * 1024); }
+  try { body = method === 'GET' ? undefined : await readLimitedBody(req.body, 4 * 1024 * 1024); }
   catch (e) { return NextResponse.json({ message: e instanceof RangeError ? 'Fichier trop volumineux' : 'Corps de requête invalide' }, { status: e instanceof RangeError ? 413 : 400 }); }
   let response: Response;
   try {
     response = await fetch(`${upstream}/api/${path}${req.nextUrl.search}`, { method, headers, body, cache: 'no-store', signal: AbortSignal.timeout(30000), redirect: 'error' });
   } catch {
-    return NextResponse.json({ message: 'Service temporairement indisponible' }, { status: 503 });
+    return NextResponse.json({ message: 'Service temporairement indisponible. Après une période de veille, patientez une minute puis réessayez.' }, { status: 503 });
   }
   if (path === 'auth/login' && response.ok) {
     const data = await response.json();

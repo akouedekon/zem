@@ -12,7 +12,7 @@
 - [x] Six tests d’intégration backend avec PostgreSQL réel.
 - [x] Parcours navigateur complet confirmé après correction du filtre administratif.
 - [x] Compose/Nginx et restauration de sauvegarde vérifiés en CI.
-- [ ] Déploiement VPS et HTTPS.
+- [ ] Déploiement gratuit Render / Netlify / Neon et vérification distante (VPS abandonné).
 - [x] APK Android debug compilé pour émulateur ; pas de test sur appareil ni de release signée.
 
 ## Vérifications exécutées le 12 octobre 2026
@@ -26,3 +26,11 @@
 Résultats CI : [Verify MVP](https://github.com/akouedekon/zem/actions/runs/38208482264), commit `191aec8`. Les quatre jobs backend, web, mobile et compose-e2e ont réussi. Android : analyse, 4 tests et compilation APK debug passés sur Linux, artefact disponible dans la CI. Ce compte rendu est une mise à jour documentaire du code vérifié.
 
 Aucun déploiement VPS, certificat réel, sauvegarde de production ou test sur téléphone n’a été effectué. Voir le runbook et SECURITY.md avant toute donnée réelle.
+
+## Adaptation sans VPS — 12 octobre 2026
+
+Configurations Render Free et Netlify Free ajoutées, PostgreSQL Neon Free prévu. Flyway V2 ajoute le stockage privé transactionnel des pièces en base : pas de disque payant. Limite de 3 Mio par document et budget de 150 Mio, avec refus de remplacement sans perte de la pièce précédente à quota atteint.
+
+Tests backend relancés localement : 8 passés sur PostgreSQL réel, migrations V1/V2 appliquées. Les deux tests ajoutés vérifient lecture après recréation du service, accès du propriétaire, remplacement et conservation à quota atteint. Les résultats CI historiques ci-dessus précèdent cette adaptation ; aucun déploiement Render/Netlify/Neon n’est revendiqué. Voir [FREE_HOSTING.md](FREE_HOSTING.md).
+
+Web : 3 tests et TypeScript passés après adaptation. Flutter : analyse sans problème et 4 tests passés. L’APK émulateur fourni auparavant reste celui de la version précédente ; il doit être recompilé pour l’URL gratuite effective.

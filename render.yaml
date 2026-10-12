@@ -1,0 +1,32 @@
+# Render Free only. Configure the four secrets/URLs in the dashboard.
+services:
+  - type: web
+    name: zem-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: ZEM_PUBLIC_URL
+        sync: false
+      - key: ZEM_ADMIN_EMAIL
+        sync: false
+      - key: ZEM_ADMIN_PASSWORD
+        sync: false
+      - key: ZEM_DOCUMENT_STORAGE
+        value: database
+      - key: ZEM_DOCUMENT_BUDGET_BYTES
+        value: "157286400"
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "3"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "0"

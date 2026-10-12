@@ -34,6 +34,7 @@ class MvpIntegrationTest {
         r.add("spring.datasource.url",()->PG.getJdbcUrl("postgres","postgres"));
         r.add("spring.datasource.username",()->"postgres"); r.add("spring.datasource.password",()->"postgres");
         r.add("zem.storage",()->System.getProperty("java.io.tmpdir")+"/zem-test-documents-"+PG.getPort());
+        r.add("zem.document-budget-bytes",()->1024);
     }
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -126,6 +127,26 @@ class MvpIntegrationTest {
         assertThat(dossiers.verify(c.publicToken()).valid()).isFalse();
         assertThat(dossiers.verify(c.publicToken()).status()).isEqualTo("EXPIRED");
         mvc.perform(get("/api/public/cards/not-a-token")).andExpect(status().isNotFound());
-        assertThat(db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success=true",Integer.class)).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success=true",Integer.class)).isEqualTo(2);
+    }
+    @Test void databaseDocumentsSurviveServiceRecreationAndReplacement() throws Exception {
+        Dossier d=draft(); byte[] first="%PDF-first".getBytes(StandardCharsets.UTF_8);
+        Document doc=dossiers.upload(driver.user(),"IDENTITY",new MockMultipartFile("file","a.pdf","application/pdf",first));
+        DossierService restarted=new DossierService(db,System.getProperty("java.io.tmpdir")+"/unused-zem-path","http://localhost:3000","database",1024);
+        assertThat(restarted.download(doc.id(),driver.user()).bytes()).isEqualTo(first);
+        assertThatThrownBy(()->restarted.download(doc.id(),other.user())).isInstanceOf(ResponseStatusException.class);
+        byte[] second="%PDF-second".getBytes(StandardCharsets.UTF_8);
+        Document replacement=dossiers.upload(driver.user(),"IDENTITY",new MockMultipartFile("file","b.pdf","application/pdf",second));
+        assertThat(restarted.download(replacement.id(),driver.user()).bytes()).isEqualTo(second);
+        assertThat(db.queryForObject("SELECT count(*) FROM document_content",Integer.class)).isEqualTo(1);
+        assertThat(dossiers.documents(d.id(),driver.user())).hasSize(1);
+    }
+    @Test void quotaFailurePreservesPreviousDocument() throws Exception {
+        draft(); byte[] original="%PDF-original".getBytes(StandardCharsets.UTF_8);
+        Document doc=dossiers.upload(driver.user(),"IDENTITY",new MockMultipartFile("file","a.pdf","application/pdf",original));
+        byte[] tooBig=new byte[1025]; System.arraycopy(original,0,tooBig,0,original.length);
+        assertThatThrownBy(()->dossiers.upload(driver.user(),"IDENTITY",new MockMultipartFile("file","b.pdf","application/pdf",tooBig)))
+            .isInstanceOfSatisfying(ResponseStatusException.class,e->assertThat(e.getStatusCode().value()).isEqualTo(507));
+        assertThat(dossiers.download(doc.id(),driver.user()).bytes()).isEqualTo(original);
     }
 }

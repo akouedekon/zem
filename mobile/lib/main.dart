@@ -56,9 +56,9 @@ class _DriverHomeState extends State<DriverHome> {
     final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'], withData: false);
     if (result == null) return;
     final chosen = result.files.single;
-    if (chosen.size > 5 * 1024 * 1024 || chosen.path == null) throw ApiException(400, 'Document supérieur à 5 Mo ou inaccessible');
+    if (chosen.size > 3 * 1024 * 1024 || chosen.path == null) throw ApiException(400, 'Document supérieur à 3 Mo ou inaccessible');
     final file = File(chosen.path!);
-    if (await file.length() > 5 * 1024 * 1024) throw ApiException(400, 'Document supérieur à 5 Mo');
+    if (await file.length() > 3 * 1024 * 1024) throw ApiException(400, 'Document supérieur à 3 Mo');
     await widget.api.upload(kind, chosen.name, await file.readAsBytes()); await _refresh(); message = 'Justificatif enregistré';
   });
   String? required(String? value) => value == null || value.trim().isEmpty ? 'Champ requis' : null;
@@ -103,7 +103,7 @@ class _DriverHomeState extends State<DriverHome> {
             }); } }, child: const Text('Enregistrer le dossier')),
           ])), if (!editable) const Padding(padding: EdgeInsets.only(top: 12), child: Text('Dossier figé pendant la revue et après validation.')),
         ]),
-        panel('Mes justificatifs', [const Text('PDF, JPEG ou PNG. 5 Mo maximum. Stockage privé.'), const SizedBox(height: 12),
+        panel('Mes justificatifs', [const Text('PDF, JPEG ou PNG. 3 Mo maximum. Stockage privé.'), const SizedBox(height: 12),
           for (final entry in kinds.entries) ListTile(contentPadding: EdgeInsets.zero, title: Text(entry.value),
             subtitle: Text(docs.any((d) => d['kind'] == entry.key) ? 'Document enregistré' : 'À ajouter'),
             trailing: IconButton(tooltip: 'Ajouter ou remplacer ${entry.value}', onPressed: busy || !editable || dossier == null ? null : () => _pick(entry.key), icon: const Icon(Icons.upload_file))),

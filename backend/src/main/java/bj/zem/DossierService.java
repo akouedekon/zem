@@ -22,11 +22,18 @@ public class DossierService {
     private final JdbcTemplate db;
     private final Path storage;
     private final String publicUrl;
+    private final boolean databaseStorage;
+    private final long storageLimit;
     public DossierService(JdbcTemplate db,@Value("${zem.storage}") String storage,
-                          @Value("${zem.public-url}") String publicUrl) throws IOException {
+                          @Value("${zem.public-url}") String publicUrl,
+                          @Value("${zem.document-storage:database}") String storageMode,
+                          @Value("${zem.document-budget-bytes:157286400}") long storageLimit) throws IOException {
         this.db=db; this.storage=Path.of(storage).toAbsolutePath().normalize();
+        if(!Set.of("database","filesystem").contains(storageMode) || storageLimit<1)
+            throw new IllegalArgumentException("Configuration de stockage invalide");
+        this.databaseStorage=storageMode.equals("database"); this.storageLimit=storageLimit;
         this.publicUrl=publicUrl.replaceAll("/+$","");
-        Files.createDirectories(this.storage);
+        if(!databaseStorage) Files.createDirectories(this.storage);
     }
     private static OffsetDateTime time(ResultSet rs,String field) throws SQLException { return rs.getObject(field,OffsetDateTime.class); }
     private static Dossier map(ResultSet rs,int row) throws SQLException {
@@ -70,15 +77,22 @@ public class DossierService {
     @Transactional public Document upload(User user,String kind,MultipartFile file) throws IOException {
         if(!Set.of("IDENTITY","DRIVING_LICENSE","VEHICLE").contains(kind)) throw new ResponseStatusException(BAD_REQUEST,"Type de justificatif inconnu");
         Dossier d=locked(mine(user).id()); owner(d,user); editable(d);
-        if(file.isEmpty() || file.getSize()>5242880) throw new ResponseStatusException(BAD_REQUEST,"Taille de document invalide");
+        if(file.isEmpty() || file.getSize()>3145728) throw new ResponseStatusException(BAD_REQUEST,"Taille de document invalide");
         byte[] bytes=file.getBytes(); String type=mediaType(bytes);
         // UUID storage keys ignore filenames entirely; originals are never exposed as paths.
         UUID id=UUID.randomUUID(); String key=id.toString(); Path path=storage.resolve(key);
         List<String> old=db.queryForList("SELECT storage_key FROM document WHERE dossier_id=? AND kind=?",String.class,d.id(),kind);
-        Files.write(path,bytes,StandardOpenOption.CREATE_NEW);
+        if(databaseStorage) {
+            db.queryForObject("SELECT id FROM document_storage_lock WHERE id=1 FOR UPDATE",Integer.class);
+            Long used=db.queryForObject("SELECT coalesce(sum(octet_length(content)),0) FROM document_content",Long.class);
+            Long replaced=db.queryForObject("SELECT coalesce(sum(octet_length(c.content)),0) FROM document_content c JOIN document d ON d.id=c.document_id WHERE d.dossier_id=? AND d.kind=?",Long.class,d.id(),kind);
+            if(used-replaced+bytes.length>storageLimit) throw new ResponseStatusException(INSUFFICIENT_STORAGE,"Capacité documentaire du pilote atteinte");
+        } else {
+            Files.write(path,bytes,StandardOpenOption.CREATE_NEW);
+        }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCompletion(int status) {
-                List<Path> removals=status==STATUS_COMMITTED?old.stream().map(storage::resolve).toList():List.of(path);
+                List<Path> removals=status==STATUS_COMMITTED?old.stream().map(storage::resolve).toList():databaseStorage?List.of():List.of(path);
                 for(Path p:removals) try { Files.deleteIfExists(p); } catch(IOException ex) {
                     org.slf4j.LoggerFactory.getLogger(DossierService.class).warn("Nettoyage de stockage à reprendre");
                 }
@@ -86,6 +100,8 @@ public class DossierService {
         });
         db.update("INSERT INTO document(id,dossier_id,kind,storage_key,media_type,byte_size) VALUES (?,?,?,?,?,?) ON CONFLICT(dossier_id,kind) DO UPDATE SET id=excluded.id,storage_key=excluded.storage_key,media_type=excluded.media_type,byte_size=excluded.byte_size,created_at=now()",
             id,d.id(),kind,key,type,bytes.length);
+        if(databaseStorage) db.update("INSERT INTO document_content(document_id,content) VALUES (?,?) ON CONFLICT(document_id) DO UPDATE SET content=excluded.content",id,bytes);
+        else db.update("DELETE FROM document_content WHERE document_id=?",id);
         db.update("UPDATE dossier SET status='DRAFT',rejection_reason=NULL,decided_at=NULL,updated_at=now() WHERE id=?",d.id());
         return new Document(id,kind,type,bytes.length);
     }
@@ -101,6 +117,8 @@ public class DossierService {
             (rs,n)->new Stored(rs.getObject("dossier_id",UUID.class),rs.getString("storage_key"),rs.getString("media_type")),id);
         if(records.isEmpty()) throw new ResponseStatusException(NOT_FOUND,"Document introuvable");
         Stored s=records.get(0); detail(s.dossierId(),user);
+        List<byte[]> contents=db.query("SELECT content FROM document_content WHERE document_id=?",(rs,n)->rs.getBytes("content"),id);
+        if(!contents.isEmpty()) return new Download(contents.get(0),s.type());
         Path path=storage.resolve(s.key()).normalize();
         if(!path.startsWith(storage) || Files.isSymbolicLink(path)) throw new ResponseStatusException(NOT_FOUND,"Document introuvable");
         return new Download(Files.readAllBytes(path),s.type());

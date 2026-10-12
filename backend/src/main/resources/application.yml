@@ -9,13 +9,16 @@ spring:
       ddl-auto: validate
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
+      max-file-size: 3MB
+      max-request-size: 4MB
 server:
+  port: ${PORT:8080}
   error:
     include-message: never
     include-stacktrace: never
 zem:
+  document-storage: ${ZEM_DOCUMENT_STORAGE:database}
+  document-budget-bytes: ${ZEM_DOCUMENT_BUDGET_BYTES:157286400}
   storage: ${ZEM_STORAGE:./private-storage}
   public-url: ${ZEM_PUBLIC_URL:http://localhost:3000}
   bootstrap-email: ${ZEM_ADMIN_EMAIL:}
