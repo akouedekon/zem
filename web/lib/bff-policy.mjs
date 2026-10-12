@@ -13,3 +13,25 @@ export function sameOrigin(origin, configured) {
   if (!origin || !configured) return false;
   try { return new URL(origin).origin === new URL(configured).origin; } catch { return false; }
 }
+export async function readLimitedBody(stream, maxBytes) {
+  if (!stream) return new ArrayBuffer(0);
+  const reader = stream.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new RangeError('Body too large');
+      }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes.buffer;
+}
