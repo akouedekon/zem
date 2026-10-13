@@ -148,9 +148,9 @@ class MvpIntegrationTest {
             .andExpect(jsonPath("$.fullName").doesNotExist()).andExpect(jsonPath("$.phone").doesNotExist());
         byte[] png=mvc.perform(get("/api/driver/card/qr").header("Authorization",bearer(driver))).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
         var image=ImageIO.read(new ByteArrayInputStream(png));
-        var decoded=new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(image))));
+        var decoded=new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(image))),Map.of(DecodeHintType.PURE_BARCODE,true));
         assertThat(decoded.getText()).isEqualTo(card.verificationUrl());
-        assertThat(decoded.getText()).doesNotContain("Conducteur","229");
+        assertThat(decoded.getText()).doesNotContain("Conducteur Test","+2290102030405","AB 1234");
         mvc.perform(post("/api/admin/dossiers/"+d.id()+"/revoke").header("Authorization",bearer(admin)).contentType("application/json").content("{\"reason\":\"Erreur administrative\"}"))
             .andExpect(status().isNoContent());
         assertThat(dossiers.verify(card.publicToken()).status()).isEqualTo("REVOKED");

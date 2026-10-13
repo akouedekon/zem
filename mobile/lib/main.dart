@@ -12,8 +12,12 @@ class ZemApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'ZEM 2.0', debugShowCheckedModeBanner: false,
-    theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff0b6049)), useMaterial3: true,
-      scaffoldBackgroundColor: const Color(0xfff6f7f2), inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder())),
+    theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff086b4b)), useMaterial3: true,
+      scaffoldBackgroundColor: const Color(0xfff3f6f4),
+      appBarTheme: const AppBarTheme(backgroundColor: Color(0xfff3f6f4), centerTitle: false),
+      cardTheme: CardThemeData(elevation: 0, color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xffdde7e1)))),
+      filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+      inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: const Color(0xfff9fbfa), contentPadding: const EdgeInsets.all(16), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
     home: DriverHome(api: api));
 }
 class DriverHome extends StatefulWidget {
@@ -89,7 +93,7 @@ class _DriverHomeState extends State<DriverHome> {
             user = await widget.api.login(email.text, password.text, register: register, passenger: passenger); password.clear();
             if (user!['role'] == 'DRIVER') await _refresh();
           }); } }, child: Text(register ? 'Créer le compte' : 'Se connecter')),
-          TextButton(onPressed: busy ? null : () => setState(() { register = !register; message = null; }), child: Text(register ? 'J’ai déjà un compte' : 'Créer un compte conducteur')),
+          TextButton(onPressed: busy ? null : () => setState(() { register = !register; message = null; }), child: Text(register ? 'J’ai déjà un compte' : 'Créer un compte')),
         ]))])
       else if (user!['role'] == 'PASSENGER') panel('Mon espace passager', [FilledButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MobilityPage(api: widget.api, role: 'PASSENGER'))), child: const Text('Commander et suivre une course'))])
       else if (user!['role'] != 'DRIVER') panel('Compte administratif', [const Text('La revue administrative est disponible dans l’interface web ZEM.')])

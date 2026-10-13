@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState, FormEvent } from 'react';
 import Mobility from './mobility';
+import RouteVisual from './route-visual';
 
 type User = { id: string; email: string; role: 'DRIVER' | 'ADMIN' | 'PASSENGER' };
 type Dossier = { id: string; fullName: string; phone: string; plate: string; status: string; rejectionReason: string | null };
@@ -73,9 +74,9 @@ export default function Home() {
     await action(async () => { await api(`admin/dossiers/${selected.id}/decision`, 'POST', { approve, reason }); setSelected(null); await refresh(user!); setMessage(approve ? 'Dossier validé : carte numérique délivrée.' : 'Dossier rejeté : le conducteur peut le corriger.'); });
   }
   const editable = !dossier || ['DRAFT', 'REJECTED'].includes(dossier.status);
-  return <main>
+  return <main className={user ? 'workspace' : 'welcome'}>
     <header><a className="brand" href="/">ZEM<span>2.0</span></a><span className="tag">Mobilité · Bénin</span>{user && <button className="quiet" disabled={busy} onClick={() => action(async () => { await api('auth/logout', 'POST'); setUser(null); setDossier(null); setCard(null); setSelected(null); })}>Se déconnecter</button>}</header>
-    <section className="intro"><p className="eyebrow">MOBILITÉ · CONDUCTEURS · ACTIVITÉ</p><h1>{user?.role === 'ADMIN' ? 'Observatoire et dossiers' : 'Votre zem, votre trajet.'}</h1><p>Commandez une course, exercez avec une carte valide et suivez les recettes de votre activité.</p></section>
+    <section className="intro"><div><p className="eyebrow">MOBILITÉ · BÉNIN</p><h1>{user?.role === 'ADMIN' ? 'Piloter la mobilité.' : user?.role === 'DRIVER' ? 'Votre activité, en mouvement.' : 'Votre zem, votre trajet.'}</h1><p>{user?.role === 'ADMIN' ? 'Suivez les courses et les recettes déclarées, et instruisez les dossiers conducteurs.' : 'Une course de proximité. Des conducteurs habilités. Une activité mieux reconnue.'}</p><div className="intro-chips"><span>Passager</span><span>Conducteur</span><span>Administration</span></div></div>{!user && <RouteVisual />}</section>
     <aside className="notice">Version pilote · Aucune couverture d’assurance ni paiement. Utilisez des données de démonstration.</aside>
     {message && <div className="message" role="status">{message}</div>}
     {user && <Mobility key={user.id} role={user.role} />}
@@ -85,7 +86,7 @@ export default function Home() {
       <label>Mot de passe<input name="password" type="password" required minLength={register ? 12 : undefined} maxLength={72} autoComplete={register ? 'new-password' : 'current-password'} /></label>
       {register && <p className="muted">12 caractères minimum. Choisissez votre espace passager ou conducteur.</p>}
       <button disabled={busy}>{busy ? 'Veuillez patienter…' : register ? 'Créer le compte' : 'Se connecter'}</button>
-    </form><button className="quiet" disabled={busy} onClick={() => { setRegister(!register); setMessage(''); }}>{register ? 'J’ai déjà un compte' : 'Créer un compte'}</button></section>
+    </form><button className="quiet" disabled={busy} onClick={() => { setRegister(!register); setMessage(''); }}>{register ? 'J’ai déjà un compte' : 'Créer un compte'}</button><p className="muted">Votre espace est protégé. Vos justificatifs restent privés.</p></section>
     : user.role === 'PASSENGER' ? null : user.role === 'DRIVER' ? <div className="grid">
       <section className="panel"><div className="section-title"><h2>Mon dossier</h2><span className={`badge ${dossier?.status || ''}`}>{statuses[dossier?.status || 'DRAFT']}</span></div>
         {dossier?.rejectionReason && <p className="message">Motif du rejet : {dossier.rejectionReason}</p>}

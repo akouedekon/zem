@@ -310,6 +310,16 @@ class _MobilityPageState extends State<MobilityPage>
                   ),
                   field('Latitude de départ', lat, number: true, bound: 90),
                   field('Longitude de départ', lon, number: true, bound: 180),
+                  Wrap(spacing: 8, children: [
+                    for (final place in [
+                      ('Étoile Rouge', '6.373', '2.406'),
+                      ('Marché Dantokpa', '6.383', '2.434'),
+                      ('Place de l’Amazone', '6.349', '2.397'),
+                    ]) ActionChip(label: Text(place.$1), onPressed: busy ? null : () => setState(() {
+                      destination.text = place.$1; destLat.text = place.$2; destLon.text = place.$3;
+                    })),
+                  ]),
+                  const Text('Repères approximatifs : confirmez le point de rendez-vous.'),
                   field('Destination', destination),
                   field(
                     'Latitude de destination',

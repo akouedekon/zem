@@ -23,6 +23,7 @@ export default function Mobility({ role }: { role: string }) {
   const [earnings, setEarnings] = useState<Earnings | null>(null), [overview, setOverview] = useState<Overview | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [lat, setLat] = useState(''), [lon, setLon] = useState('');
+  const [destination, setDestination] = useState(''), [destLat, setDestLat] = useState(''), [destLon, setDestLon] = useState('');
   const [location, setLocation] = useState<{ latitude: number; longitude: number; updated_at: string } | null>(null);
   const [drivers, setDrivers] = useState<DriverActivity[]>([]), [activityPage, setActivityPage] = useState(0);
   const refresh = useCallback(async () => {
@@ -52,11 +53,15 @@ export default function Mobility({ role }: { role: string }) {
       <label>Lieu de départ<input name="pickup" required maxLength={160} placeholder="Place de l’Étoile Rouge" /></label>
       <button type="button" className="quiet" onClick={() => action(async () => { const p = await position(); setLat(String(p.coords.latitude)); setLon(String(p.coords.longitude)); })}>Utiliser ma position comme départ</button>
       <div className="grid"><label>Latitude de départ<input type="number" step="any" min={-90} max={90} required value={lat} onChange={e => setLat(e.target.value)} /></label><label>Longitude de départ<input type="number" step="any" min={-180} max={180} required value={lon} onChange={e => setLon(e.target.value)} /></label></div>
-      <label>Destination<input name="destination" required maxLength={160} placeholder="Marché Dantokpa" /></label>
-      <div className="grid"><label>Latitude de destination<input name="destinationLat" type="number" step="any" min={-90} max={90} required /></label><label>Longitude de destination<input name="destinationLon" type="number" step="any" min={-180} max={180} required /></label></div>
+      <p className="muted">Choisir un repère à Cotonou, ou renseigner une autre destination :</p>
+      <div className="destination-options">{[{name:'Étoile Rouge',lat:6.373,lon:2.406},{name:'Marché Dantokpa',lat:6.383,lon:2.434},{name:'Place de l’Amazone',lat:6.349,lon:2.397}].map(p => <button type="button" className="quiet" key={p.name} onClick={() => { setDestination(p.name); setDestLat(String(p.lat)); setDestLon(String(p.lon)); }}>{p.name}</button>)}</div>
+      <label>Destination<input name="destination" value={destination} onChange={e => { setDestination(e.target.value); setDestLat(''); setDestLon(''); }} required maxLength={160} placeholder="Marché Dantokpa" /></label>
+      <div className="grid"><label>Latitude de destination<input name="destinationLat" value={destLat} onChange={e => setDestLat(e.target.value)} type="number" step="any" min={-90} max={90} required /></label><label>Longitude de destination<input name="destinationLon" value={destLon} onChange={e => setDestLon(e.target.value)} type="number" step="any" min={-180} max={180} required /></label></div>
+      <p className="muted">Les repères sont approximatifs. Confirmez le point de rendez-vous avec le conducteur.</p>
       <p className="muted">Pilote : destination par coordonnées, estimation à vol d’oiseau (500 FCFA + 200/km, arrondi à 100). Aucun débit. Pas de tarif réglementaire ni de calcul routier.</p><button>Demander une course</button>
     </fieldset></form>}
     {role === 'DRIVER' && <><p><strong>{online ? 'En service' : 'Hors service'}</strong> · position partagée uniquement en service, avec le passager de votre course.</p><button disabled={busy} onClick={() => action(() => online ? request('driver/service', 'PUT', { online: false }) : share())}>{online ? 'Passer hors service et effacer ma position' : 'Passer en service avec ma position'}</button>
+      {queue.length === 0 && <p className="empty-state">{online ? 'Aucune demande à proximité pour le moment. Les demandes sont actualisées automatiquement.' : 'Passez en service avec une carte valide pour recevoir des demandes à proximité.'}</p>}
       {queue.map(r => <article className="document" key={r.id}><strong>{r.pickup} → {r.destination}</strong><p>Estimation : {money(r.estimated_fare)}</p><button disabled={busy} onClick={() => action(() => request(`driver/rides/${r.id}/accept`, 'POST'))}>Accepter</button></article>)}
     </>}
     {location && <p>Position récente du conducteur : <a rel="noreferrer" target="_blank" href={`https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}#map=16/${location.latitude}/${location.longitude}`}>Voir sur la carte</a> · {new Date(location.updated_at).toLocaleTimeString('fr-FR')}</p>}

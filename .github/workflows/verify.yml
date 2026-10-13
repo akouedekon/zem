@@ -66,6 +66,13 @@ jobs:
       - run: docker compose exec -T nginx nginx -t
       - run: npm ci && npx playwright install --with-deps chromium && npm run test:e2e
         working-directory: web
+      - name: Focused local security probes
+        run: node scripts/security-probes.mjs
+        env:
+          SECURITY_BASE_URL: http://localhost:8088
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: security-probe-results, path: security-results/local-probes.json, retention-days: 7}
       - name: Verify encrypted backup restoration in isolation
         run: |
           sudo apt-get update -qq && sudo apt-get install -y age

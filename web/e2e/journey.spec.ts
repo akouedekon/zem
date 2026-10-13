@@ -13,7 +13,14 @@ test('driver submission, administrative rejection, correction, approval and publ
   const page = await driver.newPage(); const review = await admin.newPage();
   const email = `driver-${Date.now()}@zem.test`;
   const fullName = `Conducteur E2E ${Date.now()}`;
-  await page.goto('/'); await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
+  await page.goto('/');
+  await expect(page.getByRole('heading', {name:'Accéder à mon espace'})).toBeVisible();
+  await page.screenshot({path:'test-results/visuals/welcome-desktop.png',fullPage:true});
+  await page.setViewportSize({width:375,height:812});
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({path:'test-results/visuals/welcome-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1280,height:900});
+  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
   await page.getByLabel('Mon espace').selectOption('DRIVER');
   await page.getByLabel('Adresse e-mail').fill(email); await page.getByLabel('Mot de passe').fill('Driver-test-password-17');
   await page.getByRole('button', { name: 'Créer le compte', exact: true }).click();
@@ -53,6 +60,7 @@ test('driver submission, administrative rejection, correction, approval and publ
   await booking.getByLabel('Latitude de destination').fill('6.37'); await booking.getByLabel('Longitude de destination').fill('2.43');
   await booking.getByRole('button', { name: 'Demander une course', exact: true }).click();
   await expect(booking.getByText('Recherche de conducteur', { exact: false })).toBeVisible();
+  await booking.screenshot({path:'test-results/visuals/passenger.png',fullPage:true});
   await page.getByRole('button', { name: 'Passer en service avec ma position', exact: true }).click();
   await page.getByRole('button', { name: 'Accepter', exact: true }).click();
   await page.getByRole('button', { name: 'Démarrer la course', exact: true }).click();
@@ -66,6 +74,7 @@ test('driver submission, administrative rejection, correction, approval and publ
   const activity = review.getByRole('row').filter({ hasText: fullName });
   await expect(activity).toContainText(/1.*500 FCFA/);
   await expect(activity).toContainText('Non calculable');
+  await review.screenshot({path:'test-results/visuals/administration.png',fullPage:true});
   await passenger.close();
   const qr = await page.request.get('/bff/driver/card/qr'); expect(qr.status()).toBe(200); expect(qr.headers()['content-type']).toContain('image/png');
   const link = await page.getByRole('link', { name: 'Vérifier la validité' }).getAttribute('href'); expect(link).toBeTruthy();

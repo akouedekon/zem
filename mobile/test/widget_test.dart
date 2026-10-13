@@ -19,7 +19,7 @@ void main() {
     await tester.pumpWidget(ZemApp(api: ZemApi(store: MemoryStore(), client: MockClient((_) async => http.Response('{}', 500)))));
     await tester.pumpAndSettle();
     expect(find.text('Adresse e-mail'), findsOneWidget);
-    expect(find.text('Créer un compte conducteur'), findsOneWidget);
+    expect(find.text('Créer un compte'), findsOneWidget);
     expect(find.textContaining('Aucune assurance'), findsOneWidget);
   });
   test('login stores token securely and logout revokes before clearing', () async {
