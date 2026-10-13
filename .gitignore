@@ -9,3 +9,17 @@
 **/.idea/
 **/.vscode/
 *.log
+**/private-storage/
+**/*.tsbuildinfo
+infra/tls/
+work/
+**/.flutter-plugins-dependencies
+**/local.properties
+**/.gradle/
+**/captures/
+**/key.properties
+*.jks
+*.keystore
+**/test-results/
+**/playwright-report/
+**/.kotlin/

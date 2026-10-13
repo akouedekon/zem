@@ -1,0 +1,16 @@
+[build]
+  base = "web"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# API_INTERNAL_URL and WEB_ORIGIN must be configured for production functions
+# in the Netlify dashboard. Do not put secrets or guessed hostnames here.
+# Disable deploy previews: their origin must never share production sessions.
+[context.deploy-preview]
+  command = "echo 'Deploy previews disabled for the authenticated pilot' && exit 1"
+
+[context.branch-deploy]
+  command = "echo 'Branch deploys disabled for the authenticated pilot' && exit 1"
