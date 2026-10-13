@@ -2,6 +2,14 @@ import { test, expect } from '@playwright/test';
 test('driver submission, administrative rejection, correction, approval and public revocation', async ({ browser }) => {
   test.setTimeout(120000);
   const driver = await browser.newContext({ geolocation: { latitude: 6.36, longitude: 2.40 }, permissions: ['geolocation'] }); const admin = await browser.newContext();
+  // All actors share one IP in CI: pace requests below the Nginx limit.
+  let nextRequest = 0;
+  const pace = async (context: import('@playwright/test').BrowserContext) => context.route('**/bff/**', async route => {
+    const slot = Math.max(Date.now(), nextRequest); nextRequest = slot + 150;
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, slot - Date.now())));
+    await route.continue();
+  });
+  await pace(driver); await pace(admin);
   const page = await driver.newPage(); const review = await admin.newPage();
   const email = `driver-${Date.now()}@zem.test`;
   const fullName = `Conducteur E2E ${Date.now()}`;
@@ -35,7 +43,7 @@ test('driver submission, administrative rejection, correction, approval and publ
   await review.reload(); await review.getByRole('button', { name: fullName }).click();
   await review.getByRole('button', { name: 'Valider et délivrer la carte' }).click(); await expect(review.getByRole('status')).toContainText('carte numérique délivrée');
   await page.reload(); await expect(page.getByRole('img', { name: 'QR de vérification de la carte' })).toBeVisible();
-  const passenger = await browser.newContext(); const booking = await passenger.newPage();
+  const passenger = await browser.newContext(); await pace(passenger); const booking = await passenger.newPage();
   await booking.goto('/'); await booking.getByRole('button', { name: 'Créer un compte', exact: true }).click();
   await booking.getByLabel('Adresse e-mail').fill(`passenger-${Date.now()}@zem.test`);
   await booking.getByLabel('Mot de passe').fill('Passenger-test-password-17');
