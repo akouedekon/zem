@@ -77,7 +77,8 @@ public class DossierService {
     @Transactional public Document upload(User user,String kind,MultipartFile file) throws IOException {
         if(!Set.of("IDENTITY","DRIVING_LICENSE","VEHICLE").contains(kind)) throw new ResponseStatusException(BAD_REQUEST,"Type de justificatif inconnu");
         Dossier d=locked(mine(user).id()); owner(d,user); editable(d);
-        if(file.isEmpty() || file.getSize()>3145728) throw new ResponseStatusException(BAD_REQUEST,"Taille de document invalide");
+        if(file.isEmpty()) throw new ResponseStatusException(BAD_REQUEST,"Le document est vide");
+        if(file.getSize()>4194304) throw new ResponseStatusException(PAYLOAD_TOO_LARGE,"Document trop volumineux (4 Mo maximum)");
         byte[] bytes=file.getBytes(); String type=mediaType(bytes);
         // UUID storage keys ignore filenames entirely; originals are never exposed as paths.
         UUID id=UUID.randomUUID(); String key=id.toString(); Path path=storage.resolve(key);

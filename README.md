@@ -15,7 +15,7 @@ Le parcours MVP est implémenté : compte conducteur, justificatifs privés, sou
 
 Une première extension ajoute la demande de course, l’acceptation par un conducteur validé en service, le suivi d’une position récente, la fin de course et les recettes/charges déclarées. Le web et le mobile Android disposent des espaces passager et conducteur ; l’administration consulte les agrégats. Voir [le parcours et ses limites](docs/MOBILITY.md). La recherche d’adresses et le routage ne sont pas encore intégrés.
 
-Copier `.env.example` vers `.env`, renseigner le mot de passe PostgreSQL et le compte administrateur initial, puis lancer `docker compose up -d --build`. Interface locale : http://localhost:8088. Instructions locales : [runbook](docs/RUNBOOK.md). Mise en ligne, quotas et limites : [hébergement gratuit](docs/FREE_HOSTING.md). Les justificatifs nouveaux sont privés dans PostgreSQL, limités à 3 Mio par fichier et 150 Mio au total.
+Copier `.env.example` vers `.env`, renseigner le mot de passe PostgreSQL et le compte administrateur initial, puis lancer `docker compose up -d --build`. Interface locale : http://localhost:8088. Instructions locales : [runbook](docs/RUNBOOK.md). Mise en ligne, quotas et limites : [hébergement gratuit](docs/FREE_HOSTING.md). Les justificatifs nouveaux sont privés dans PostgreSQL, limités à 4 Mio par fichier et 150 Mio au total.
 
 Ne pas utiliser avec des données personnelles réelles avant audit de sécurité et validation juridique.
 

@@ -17,9 +17,9 @@ Ce montage convient à une démonstration avec données synthétiques, sans disp
 
 ## Stockage et évolution du schéma
 
-Flyway V2 ajoute `document_content` avec `bytea`, privé et accessible uniquement par l'API après contrôle du propriétaire ou du rôle administrateur. Les fichiers nouveaux et leurs métadonnées sont enregistrés dans la même transaction. Une ligne verrouillée sérialise la vérification du budget entre conducteurs. Le plafond applicatif est de 150 Mio de contenu, avec 3 Mio par document. Cette réserve ne garantit pas la taille physique totale de PostgreSQL : index, versions de lignes, WAL et branches consomment aussi du stockage. Surveiller le quota Neon et arrêter les nouveaux dépôts avant saturation.
+Flyway V2 ajoute `document_content` avec `bytea`, privé et accessible uniquement par l'API après contrôle du propriétaire ou du rôle administrateur. Les fichiers nouveaux et leurs métadonnées sont enregistrés dans la même transaction. Une ligne verrouillée sérialise la vérification du budget entre conducteurs. Le plafond applicatif est de 150 Mio de contenu, avec 4 Mio par document. Cette réserve ne garantit pas la taille physique totale de PostgreSQL : index, versions de lignes, WAL et branches consomment aussi du stockage. Surveiller le quota Neon et arrêter les nouveaux dépôts avant saturation.
 
-La limite de 3 Mio laisse une marge sous les 4,5 Mo utiles des requêtes binaires Netlify. Le mode `ZEM_DOCUMENT_STORAGE=database` est le défaut. `filesystem` reste disponible pour les anciens environnements locaux. V2 ne convertit pas les anciens fichiers : conserver le volume et les sauvegardes associés. Pour ce nouveau pilote gratuit, utiliser une base neuve avec données synthétiques ; ne pas copier uniquement les métadonnées de fichiers vers Neon.
+La migration V4 porte la limite à 4 Mio (4 194 304 octets), avec 256 Kio réservés au multipart. Elle laisse une marge sous les 4,5 Mo utiles des requêtes binaires Netlify. Le mode `ZEM_DOCUMENT_STORAGE=database` est le défaut. `filesystem` reste disponible pour les anciens environnements locaux. V2 ne convertit pas les anciens fichiers : conserver le volume et les sauvegardes associés. Pour ce nouveau pilote gratuit, utiliser une base neuve avec données synthétiques ; ne pas copier uniquement les métadonnées de fichiers vers Neon.
 
 ## Mise en ligne sans abonnement
 

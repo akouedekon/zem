@@ -65,7 +65,7 @@ class ZemApi {
     return _decode(response);
   }
   Future<dynamic> upload(String kind, String filename, Uint8List bytes) async {
-    if (bytes.isEmpty || bytes.length > 3 * 1024 * 1024) throw ApiException(400, 'Fichier vide ou supérieur à 3 Mo');
+    if (bytes.isEmpty || bytes.length > 4 * 1024 * 1024) throw ApiException(400, 'Fichier vide ou supérieur à 4 Mo');
     final req = http.MultipartRequest('POST', url('driver/documents/$kind'))..headers.addAll(headers)
       ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
     return _decode(await http.Response.fromStream(await client.send(req).timeout(const Duration(seconds: 30))));

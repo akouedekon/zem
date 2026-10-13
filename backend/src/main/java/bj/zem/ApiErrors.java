@@ -21,5 +21,5 @@ public class ApiErrors {
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<?> conflict(Exception ex) { return ResponseEntity.status(409).body(Map.of("message","Conflit, rechargez le dossier")); }
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    ResponseEntity<?> upload(Exception ex) { return ResponseEntity.status(413).body(Map.of("message","Document trop volumineux (5 Mo maximum)")); }
+    ResponseEntity<?> upload(Exception ex) { return ResponseEntity.status(413).body(Map.of("message","Document trop volumineux (4 Mo maximum)")); }
 }

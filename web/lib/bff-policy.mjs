@@ -1,3 +1,5 @@
+// 4 MiB document plus multipart overhead, below Netlify's binary request ceiling.
+export const maxRequestBytes = 4 * 1024 * 1024 + 256 * 1024;
 export function allowedPath(path, method) {
   const uuid = '[0-9a-fA-F-]{36}';
   const rules = {
