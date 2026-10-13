@@ -123,14 +123,17 @@ class _MobilityPageState extends State<MobilityPage>
   }
 
   Future<Position> position() async {
-    if (!await Geolocator.isLocationServiceEnabled())
+    if (!await Geolocator.isLocationServiceEnabled()) {
       throw Exception('Activez la localisation du téléphone');
+    }
     var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied)
+    if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
+    }
     if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever)
+        permission == LocationPermission.deniedForever) {
       throw Exception('Autorisez la position pendant l’utilisation de ZEM');
+    }
     return Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
@@ -192,8 +195,9 @@ class _MobilityPageState extends State<MobilityPage>
         if (s == null || s.isEmpty) return optional ? null : 'Champ requis';
         if (number) {
           final n = double.tryParse(s);
-          if (n == null || !n.isFinite || (bound != null && n.abs() > bound))
+          if (n == null || !n.isFinite || (bound != null && n.abs() > bound)) {
             return 'Nombre invalide';
+          }
         }
         return null;
       },
@@ -218,19 +222,21 @@ class _MobilityPageState extends State<MobilityPage>
           FilledButton(
             onPressed: () {
               final n = int.tryParse(amount);
-              if (n != null && n >= 0 && n <= 1000000)
+              if (n != null && n >= 0 && n <= 1000000) {
                 Navigator.pop(context, n);
+              }
             },
             child: const Text('Terminer'),
           ),
         ],
       ),
     );
-    if (value != null)
+    if (value != null) {
       await run(
         () =>
             mutate('driver/rides/${r['id']}/complete', body: {'amount': value}),
       );
+    }
   }
 
   @override
