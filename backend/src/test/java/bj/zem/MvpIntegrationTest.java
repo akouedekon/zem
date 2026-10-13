@@ -41,10 +41,12 @@ class MvpIntegrationTest {
     @Autowired JdbcTemplate db;
     @Autowired AuthService auth;
     @Autowired DossierService dossiers;
+    @Autowired MobilityService mobility;
     Auth driver,other,admin;
     @BeforeEach void fixtures() {
+        db.execute("TRUNCATE mobility_audit,ride,driver_service,activity_declaration CASCADE");
         db.execute("TRUNCATE decision_audit,digital_card,document,dossier,auth_session CASCADE");
-        db.update("DELETE FROM app_user WHERE role='DRIVER'");
+        db.update("DELETE FROM app_user WHERE role<>'ADMIN'");
         driver=account("driver@zem.test"); other=account("other@zem.test");
         admin=auth.login(new Login("admin@zem.test","Admin-test-password-17"));
     }
@@ -56,6 +58,58 @@ class MvpIntegrationTest {
         for(String kind:List.of("IDENTITY","DRIVING_LICENSE","VEHICLE")) dossiers.upload(driver.user(),kind,
             new MockMultipartFile("file","../private.pdf","application/pdf","%PDF-1.4\nsynthetic test fixture".getBytes(StandardCharsets.UTF_8)));
         return dossiers.submit(driver.user());
+    }
+    Auth passenger() { auth.registerPassenger(new Register("passenger@zem.test","Passenger-test-password-17")); return auth.login(new Login("passenger@zem.test","Passenger-test-password-17")); }
+    MobilityController.Booking booking() { return new MobilityController.Booking("Étoile Rouge","Dantokpa",6.36,2.40,6.37,2.43); }
+    @Test void declarationsUseBeninDateAndRejectFutureDays() throws Exception {
+        var day=java.time.LocalDate.now(java.time.ZoneId.of("Africa/Porto-Novo"));
+        mvc.perform(put("/api/driver/declarations").header("Authorization",bearer(driver)).contentType("application/json").content(json.writeValueAsString(new MobilityController.Declaration(day,0,0,null)))).andExpect(status().isOk());
+        mvc.perform(put("/api/driver/declarations").header("Authorization",bearer(driver)).contentType("application/json").content(json.writeValueAsString(new MobilityController.Declaration(day.plusDays(1),0,0,null)))).andExpect(status().isBadRequest());
+    }
+    @Test void mobilityFullJourneyAndRevenueProvenance() throws Exception {
+        Auth p=passenger();Dossier d=submitted();dossiers.decide(d.id(),admin.user(),new Decision(true,null));
+        mobility.availability(driver.user(),new MobilityController.Availability(true,6.36,2.40));
+        var r=mobility.book(p.user(),booking());UUID id=(UUID)r.get("id");
+        assertThat(mobility.requests(driver.user())).hasSize(1);
+        mvc.perform(get("/api/driver/requests").header("Authorization",bearer(p))).andExpect(status().isForbidden());
+        mobility.accept(driver.user(),id);
+        assertThat(mobility.location(p.user(),id)).containsKeys("latitude","longitude");
+        assertThatThrownBy(()->mobility.location(other.user(),id)).isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(()->mobility.transition(other.user(),id,"START",null)).isInstanceOf(ResponseStatusException.class);
+        mobility.transition(driver.user(),id,"START",null);mobility.transition(driver.user(),id,"COMPLETE",1500L);
+        assertThatThrownBy(()->mobility.transition(driver.user(),id,"COMPLETE",1500L)).isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(()->mobility.location(p.user(),id)).isInstanceOf(ResponseStatusException.class);
+        var day=java.time.LocalDate.now(java.time.ZoneId.of("Africa/Porto-Novo"));
+        assertThat(mobility.earnings(driver.user().id(),day).get("estimatedBalance")).isNull();
+        var e=mobility.declare(driver.user(),new MobilityController.Declaration(day,3500,5,3200L));
+        assertThat(e.get("trackedRevenue")).isEqualTo(5000L);assertThat(e.get("estimatedBalance")).isEqualTo(1800L);
+        var activity=mobility.activity(day,0).stream().filter(row->row.get("driver_id").equals(driver.user().id())).findFirst().orElseThrow();
+        assertThat(((Number)activity.get("estimated_balance")).longValue()).isEqualTo(1800L);
+        mvc.perform(get("/api/admin/activity?day="+day).header("Authorization",bearer(p))).andExpect(status().isForbidden());
+        mobility.declare(driver.user(),new MobilityController.Declaration(day,3500,5,null));
+        assertThat(mobility.earnings(driver.user().id(),day).get("estimatedBalance")).isNull();
+        mobility.availability(driver.user(),new MobilityController.Availability(false,null,null));
+        assertThat(mobility.availability(driver.user()).get("latitude")).isNull();
+    }
+    @Test void mobilityRequiresValidCardAndSingleActiveCourse() throws Exception {
+        Auth p=passenger();
+        assertThatThrownBy(()->mobility.availability(driver.user(),new MobilityController.Availability(true,6.36,2.40))).isInstanceOf(ResponseStatusException.class);
+        UUID id=(UUID)mobility.book(p.user(),booking()).get("id");
+        mvc.perform(post("/api/passenger/rides").header("Authorization",bearer(p)).contentType("application/json").content(json.writeValueAsString(booking()))).andExpect(status().isConflict());
+        mobility.transition(p.user(),id,"CANCEL",null);
+        mvc.perform(post("/api/passenger/rides").header("Authorization",bearer(p)).contentType("application/json").content("{\"pickup\":\"a\",\"destination\":\"b\",\"pickupLat\":999,\"pickupLon\":2,\"destinationLat\":6,\"destinationLon\":2}" )).andExpect(status().isBadRequest());
+    }
+    @Test void concurrentRideAcceptsChooseExactlyOneDriver() throws Exception {
+        Auth p=passenger();Dossier d=submitted();dossiers.decide(d.id(),admin.user(),new Decision(true,null));
+        Dossier od=dossiers.save(other.user(),new Profile("Autre Conducteur","+2290102030406","AC 1234"));
+        db.update("UPDATE dossier SET status='APPROVED' WHERE id=?",od.id());
+        db.update("INSERT INTO digital_card(id,dossier_id,public_token,expires_at) VALUES (?,?,?,now()+interval '1 year')",UUID.randomUUID(),od.id(),Tokens.random());
+        for(Auth a:List.of(driver,other)) mobility.availability(a.user(),new MobilityController.Availability(true,6.36,2.40));
+        UUID id=(UUID)mobility.book(p.user(),booking()).get("id");ExecutorService pool=Executors.newFixedThreadPool(2);
+        try {var results=pool.invokeAll(List.of((Callable<Boolean>)()->{try{mobility.accept(driver.user(),id);return true;}catch(ResponseStatusException ex){return false;}},()->{try{mobility.accept(other.user(),id);return true;}catch(ResponseStatusException ex){return false;}}));
+            assertThat(results.get(0).get() ^ results.get(1).get()).isTrue();
+            assertThat(db.queryForObject("SELECT count(*) FROM mobility_audit WHERE action='ACCEPTED'",Integer.class)).isEqualTo(1);
+        } finally {pool.shutdownNow();}
     }
     @Test void registrationNeverAcceptsRoleAndPasswordsAreHashed() throws Exception {
         mvc.perform(post("/api/auth/register").contentType("application/json").content("{\"email\":\"NEW@zem.test\",\"password\":\"Long-password-17\",\"role\":\"ADMIN\"}"))
@@ -99,9 +153,9 @@ class MvpIntegrationTest {
             .andExpect(jsonPath("$.fullName").doesNotExist()).andExpect(jsonPath("$.phone").doesNotExist());
         byte[] png=mvc.perform(get("/api/driver/card/qr").header("Authorization",bearer(driver))).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
         var image=ImageIO.read(new ByteArrayInputStream(png));
-        var decoded=new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(image))));
+        var decoded=new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(image))),Map.of(DecodeHintType.PURE_BARCODE,true));
         assertThat(decoded.getText()).isEqualTo(card.verificationUrl());
-        assertThat(decoded.getText()).doesNotContain("Conducteur","229");
+        assertThat(decoded.getText()).doesNotContain("Conducteur Test","+2290102030405","AB 1234");
         mvc.perform(post("/api/admin/dossiers/"+d.id()+"/revoke").header("Authorization",bearer(admin)).contentType("application/json").content("{\"reason\":\"Erreur administrative\"}"))
             .andExpect(status().isNoContent());
         assertThat(dossiers.verify(card.publicToken()).status()).isEqualTo("REVOKED");
@@ -127,7 +181,7 @@ class MvpIntegrationTest {
         assertThat(dossiers.verify(c.publicToken()).valid()).isFalse();
         assertThat(dossiers.verify(c.publicToken()).status()).isEqualTo("EXPIRED");
         mvc.perform(get("/api/public/cards/not-a-token")).andExpect(status().isNotFound());
-        assertThat(db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success=true",Integer.class)).isEqualTo(2);
+        assertThat(db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success=true",Integer.class)).isEqualTo(3);
     }
     @Test void databaseDocumentsSurviveServiceRecreationAndReplacement() throws Exception {
         Dossier d=draft(); byte[] first="%PDF-first".getBytes(StandardCharsets.UTF_8);

@@ -6,6 +6,11 @@ test('BFF only forwards known API paths and methods', () => {
   assert.equal(allowedPath('auth/login', 'POST'), true);
   for (const p of ['../auth/login', 'https://evil.test', 'auth/login/extra', 'driver/documents/OTHER']) assert.equal(allowedPath(p, 'POST'), false);
   assert.equal(allowedPath('auth/login', 'GET'), false);
+  const id = '00000000-0000-0000-0000-000000000001';
+  assert.equal(allowedPath('auth/register-passenger', 'POST'), true);
+  assert.equal(allowedPath(`driver/rides/${id}/accept`, 'POST'), true);
+  assert.equal(allowedPath(`driver/rides/${id}/delete`, 'POST'), false);
+  assert.equal(allowedPath('driver/declarations', 'PUT'), true);
 });
 test('chunked uploads stop at the byte limit even without Content-Length', async () => {
   let cancelled = false;

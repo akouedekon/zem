@@ -43,9 +43,9 @@ class ZemApi {
     try { return Map<String, dynamic>.from(await request('auth/me')); }
     on ApiException catch (e) { if (e.status == 401) return null; rethrow; }
   }
-  Future<Map<String, dynamic>> login(String email, String password, {bool register = false}) async {
+  Future<Map<String, dynamic>> login(String email, String password, {bool register = false, bool passenger = false}) async {
     final body = {'email': email.trim(), 'password': password};
-    if (register) await request('auth/register', method: 'POST', body: body);
+    if (register) await request(passenger ? 'auth/register-passenger' : 'auth/register', method: 'POST', body: body);
     final data = await request('auth/login', method: 'POST', body: body);
     _token = data['token']; await store.write(_token!);
     return Map<String, dynamic>.from(data['user']);

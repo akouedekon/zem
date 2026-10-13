@@ -35,12 +35,19 @@ public class AuthService implements ApplicationRunner {
     }
     @Transactional
     public User register(Register request) {
+        return registerAs(request,"DRIVER");
+    }
+    @Transactional
+    public User registerPassenger(Register request) {
+        return registerAs(request,"PASSENGER");
+    }
+    private User registerAs(Register request,String role) {
         checkPassword(request.password());
         UUID id=UUID.randomUUID(); String email=normalize(request.email());
-        int inserted=db.update("INSERT INTO app_user(id,email,password_hash,role) VALUES (?,?,?,'DRIVER') ON CONFLICT(email) DO NOTHING",
-                id,email,encoder.encode(request.password()));
+        int inserted=db.update("INSERT INTO app_user(id,email,password_hash,role) VALUES (?,?,?,?) ON CONFLICT(email) DO NOTHING",
+                id,email,encoder.encode(request.password()),role);
         if(inserted==0) throw new ResponseStatusException(CONFLICT,"Inscription impossible avec cette adresse");
-        return new User(id,email,"DRIVER");
+        return new User(id,email,role);
     }
     @Transactional
     public Auth login(Login request) {

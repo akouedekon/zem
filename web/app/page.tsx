@@ -1,7 +1,9 @@
 'use client';
 import { useCallback, useEffect, useState, FormEvent } from 'react';
+import Mobility from './mobility';
+import RouteVisual from './route-visual';
 
-type User = { id: string; email: string; role: 'DRIVER' | 'ADMIN' };
+type User = { id: string; email: string; role: 'DRIVER' | 'ADMIN' | 'PASSENGER' };
 type Dossier = { id: string; fullName: string; phone: string; plate: string; status: string; rejectionReason: string | null };
 type Doc = { id: string; kind: string; mediaType: string; byteSize: number };
 type Card = { id: string; verificationUrl: string; expiresAt: string; revokedAt: string | null };
@@ -24,6 +26,7 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [register, setRegister] = useState(false);
+  const [accountRole, setAccountRole] = useState('PASSENGER');
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [card, setCard] = useState<Card | null>(null);
@@ -41,7 +44,7 @@ export default function Home() {
         setDossier(await api<Dossier>('driver/dossier')); setDocs(await api<Doc[]>('driver/documents'));
         try { setCard(await api<Card>('driver/card')); } catch (e) { if (!(e instanceof ApiError) || e.status !== 404) throw e; setCard(null); }
       } catch (e) { if (e instanceof ApiError && e.status === 404) { setDossier(null); setDocs([]); setCard(null); } else throw e; }
-    } else setQueue(await api<Dossier[]>(`admin/dossiers?status=${filter}&page=${page}`));
+    } else if (u.role === 'ADMIN') setQueue(await api<Dossier[]>(`admin/dossiers?status=${filter}&page=${page}`));
   }, [filter, page]);
   useEffect(() => { api<User>('auth/me').then(setUser).catch(e => { if (!(e instanceof ApiError) || e.status !== 401) setMessage(e.message); }).finally(() => setLoading(false)); }, []);
   useEffect(() => { if (user) refresh(user).catch(error); }, [user, refresh]);
@@ -50,7 +53,7 @@ export default function Home() {
     e.preventDefault(); const values = new FormData(e.currentTarget);
     await action(async () => {
       const body = { email: values.get('email'), password: values.get('password') };
-      if (register) await api('auth/register', 'POST', body);
+      if (register) await api(accountRole === 'PASSENGER' ? 'auth/register-passenger' : 'auth/register', 'POST', body);
       const result = await api<{ user: User }>('auth/login', 'POST', body); setUser(result.user); setRegister(false);
     });
   }
@@ -71,18 +74,20 @@ export default function Home() {
     await action(async () => { await api(`admin/dossiers/${selected.id}/decision`, 'POST', { approve, reason }); setSelected(null); await refresh(user!); setMessage(approve ? 'Dossier validé : carte numérique délivrée.' : 'Dossier rejeté : le conducteur peut le corriger.'); });
   }
   const editable = !dossier || ['DRAFT', 'REJECTED'].includes(dossier.status);
-  return <main>
+  return <main className={user ? 'workspace' : 'welcome'}>
     <header><a className="brand" href="/">ZEM<span>2.0</span></a><span className="tag">Mobilité · Bénin</span>{user && <button className="quiet" disabled={busy} onClick={() => action(async () => { await api('auth/logout', 'POST'); setUser(null); setDossier(null); setCard(null); setSelected(null); })}>Se déconnecter</button>}</header>
-    <section className="intro"><p className="eyebrow">UN PARCOURS CLAIR, UNE CARTE VÉRIFIABLE</p><h1>{user?.role === 'ADMIN' ? 'Revue des dossiers' : 'Votre activité, votre dossier.'}</h1><p>{user?.role === 'ADMIN' ? 'Examinez les justificatifs et consignez chaque décision.' : 'Préparez vos justificatifs, suivez la revue administrative et retrouvez votre carte numérique.'}</p></section>
+    <section className="intro"><div><p className="eyebrow">MOBILITÉ · BÉNIN</p><h1>{user?.role === 'ADMIN' ? 'Piloter la mobilité.' : user?.role === 'DRIVER' ? 'Votre activité, en mouvement.' : 'Votre zem, votre trajet.'}</h1><p>{user?.role === 'ADMIN' ? 'Suivez les courses et les recettes déclarées, et instruisez les dossiers conducteurs.' : 'Une course de proximité. Des conducteurs habilités. Une activité mieux reconnue.'}</p><div className="intro-chips"><span>Passager</span><span>Conducteur</span><span>Administration</span></div></div>{!user && <RouteVisual />}</section>
     <aside className="notice">Version pilote · Aucune couverture d’assurance ni paiement. Utilisez des données de démonstration.</aside>
     {message && <div className="message" role="status">{message}</div>}
-    {loading ? <p>Chargement…</p> : !user ? <section className="panel auth"><h2>{register ? 'Créer mon compte conducteur' : 'Accéder à mon espace'}</h2><form onSubmit={signIn}>
+    {user && <Mobility key={user.id} role={user.role} />}
+    {loading ? <p>Chargement…</p> : !user ? <section className="panel auth"><h2>{register ? 'Créer mon compte' : 'Accéder à mon espace'}</h2><form onSubmit={signIn}>
+      {register && <label>Mon espace<select value={accountRole} onChange={e => setAccountRole(e.target.value)}><option value="PASSENGER">Passager</option><option value="DRIVER">Conducteur</option></select></label>}
       <label>Adresse e-mail<input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
       <label>Mot de passe<input name="password" type="password" required minLength={register ? 12 : undefined} maxLength={72} autoComplete={register ? 'new-password' : 'current-password'} /></label>
-      {register && <p className="muted">12 caractères minimum. Votre compte permet de déposer un dossier conducteur.</p>}
+      {register && <p className="muted">12 caractères minimum. Choisissez votre espace passager ou conducteur.</p>}
       <button disabled={busy}>{busy ? 'Veuillez patienter…' : register ? 'Créer le compte' : 'Se connecter'}</button>
-    </form><button className="quiet" disabled={busy} onClick={() => { setRegister(!register); setMessage(''); }}>{register ? 'J’ai déjà un compte' : 'Créer un compte conducteur'}</button></section>
-    : user.role === 'DRIVER' ? <div className="grid">
+    </form><button className="quiet" disabled={busy} onClick={() => { setRegister(!register); setMessage(''); }}>{register ? 'J’ai déjà un compte' : 'Créer un compte'}</button><p className="muted">Votre espace est protégé. Vos justificatifs restent privés.</p></section>
+    : user.role === 'PASSENGER' ? null : user.role === 'DRIVER' ? <div className="grid">
       <section className="panel"><div className="section-title"><h2>Mon dossier</h2><span className={`badge ${dossier?.status || ''}`}>{statuses[dossier?.status || 'DRAFT']}</span></div>
         {dossier?.rejectionReason && <p className="message">Motif du rejet : {dossier.rejectionReason}</p>}
         <form key={dossier ? `${dossier.id}-${dossier.status}` : 'new'} onSubmit={save}><fieldset disabled={busy || !editable}>
