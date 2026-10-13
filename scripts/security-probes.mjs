@@ -4,10 +4,12 @@ const base = new URL(process.env.SECURITY_BASE_URL || 'http://127.0.0.1:18080');
 if (!['localhost', '127.0.0.1', '[::1]'].includes(base.hostname)) throw new Error('These probes require an isolated local instance.');
 const checks=[];
 async function check(name,path,expected,{token,method='GET',body}={}) {
-  await new Promise(resolve=>setTimeout(resolve,150));
+  // Respect the shared-IP authentication budget: ten requests per minute.
+  await new Promise(resolve=>setTimeout(resolve,/\/auth\/(login|register)/.test(path)?6500:150));
   const response=await fetch(new URL(path,base),{method,headers:{...(token?{Authorization:`Bearer ${token}`} : {}),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
   const data=await response.json().catch(()=>null);
   checks.push({name,status:response.status,expected,passed:expected.includes(response.status)});
+  if(!expected.includes(response.status)) console.error(`${name}: HTTP ${response.status}, expected ${expected.join('/')}`);
   return data;
 }
 const nonce=Date.now(),password='Local-security-probe-2026';
@@ -16,6 +18,7 @@ async function account(suffix) {
   const user=await check(`Registration cannot escalate ${suffix}`,'/api/auth/register-passenger',[201],{method:'POST',body:{email,password,role:'ADMIN'}});
   checks.push({name:`Server assigns PASSENGER to ${suffix}`,passed:user?.role==='PASSENGER'});
   const auth=await check(`Login ${suffix}`,'/api/auth/login',[200],{method:'POST',body:{email,password}});
+  if(!auth?.token) { await saveReport(); throw new Error('Security fixture login failed; consult the sanitized report.'); }
   return auth.token;
 }
 await check('Anonymous admin access','/api/admin/dossiers',[401]);
@@ -37,9 +40,12 @@ await check('Owner cancels test ride',`/api/rides/${ride.id}/cancel`,[200],{toke
 await check('Logout revokes session','/api/auth/logout',[204],{token:first,method:'POST'});
 await check('Revoked session cannot replay','/api/auth/me',[401],{token:first});
 await check('Logout second test account','/api/auth/logout',[204],{token:second,method:'POST'});
-const report={timestamp:new Date().toISOString(),scope:base.origin,limitations:'Focused automated local probes, not an independent or exhaustive penetration test.',checks};
-await mkdir('security-results',{recursive:true});
-await writeFile('security-results/local-probes.json',JSON.stringify(report,null,2));
+async function saveReport() {
+  const report={timestamp:new Date().toISOString(),scope:base.origin,limitations:'Focused automated local probes, not an independent or exhaustive penetration test.',checks};
+  await mkdir('security-results',{recursive:true});
+  await writeFile('security-results/local-probes.json',JSON.stringify(report,null,2));
+}
+await saveReport();
 console.log(`${checks.filter(c=>c.passed).length}/${checks.length} security checks passed`);
 for(const c of checks.filter(c=>!c.passed)) console.error(c);
 if(checks.some(c=>!c.passed)) process.exitCode=1;
