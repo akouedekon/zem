@@ -14,7 +14,7 @@ Le projet est une proposition de service, sans homologation ni intégration offi
 ## Répétition avant la présentation
 
 - Fusionner et déployer la même version du backend et du web après succès de la CI. Vérifier les URL effectives, les variables Render/Netlify et l’application Flyway V3 ; un lien web existant ne prouve pas que cette version y tourne.
-- Installer un APK compilé avec `API_BASE_URL=https://zem-api-akx6.onrender.com/api` pour le téléphone. L’artefact CI nommé `zem-android-debug-emulator` pointe vers l’émulateur local et ne convient pas au téléphone de présentation.
+- Télécharger `zem-android-pilot-render` depuis la [CI vérifiée](https://github.com/akouedekon/zem/actions/runs/38452787167), extraire le ZIP et installer `app-debug.apk` pour le téléphone. Il est compilé avec `API_BASE_URL=https://zem-api-akx6.onrender.com/api`. L’artefact `zem-android-debug-emulator` pointe vers l’émulateur local et ne convient pas au téléphone de présentation. Ces APK debug servent au pilote, sans signature de distribution finale ; ils expirent de la CI après 7 jours.
 - Faire une répétition sur le téléphone et le réseau utilisés le lendemain : autorisation GPS, session, réservation, acceptation, fin et affichage administratif. Cette vérification terrain reste nécessaire.
 - Démarrer l’API gratuite avant la présentation et contrôler sa disponibilité. Préparer une démonstration locale reproductible et une capture vidéo du parcours comme secours ; aucune continuité de service gratuite n’est garantie.
 - Ne présenter aucun revenu synthétique comme statistique nationale réelle. Aucun encaissement, paiement ou assurance n’est fourni.

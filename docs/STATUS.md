@@ -40,3 +40,18 @@ Web : 3 tests et TypeScript passés après adaptation. Flutter : analyse sans pr
 Première tranche de mobilité implémentée dans le code : compte passager, demande de course, service conducteur avec position récente, acceptation concurrente, démarrage/fin/annulation, recettes de course déclarées, déclarations hors ZEM et charges facultatives. L’administration dispose d’agrégats et d’un tableau par conducteur. Web Next.js et mobile Flutter Android reliés à ces API. Aucun paiement, assurance ou service payant ajouté. Détails et limites : [MOBILITY.md](MOBILITY.md).
 
 Contrôles locaux : 11 tests backend passés avec PostgreSQL réel et migrations V1/V2/V3 ; 3 tests de passerelle web et build Next.js/TypeScript passés ; 5 tests Flutter passés, analyse sans problème. Le parcours navigateur est passé contre l’API HTTP réelle : dossier/rejet/correction/validation, réservation passager, GPS simulé avec permission, acceptation, démarrage, recette de fin, remise hors service, reçu, vérification du tableau administratif par conducteur, carte et révocation. Le GPS physique n’est pas testé. Aucun déploiement de cette tranche n’est revendiqué.
+
+### Interface de présentation et sécurité — 13 octobre 2026
+
+Interface web responsive et thème Flutter revus ; repères de destination approximatifs, états vides, présentation distincte des sources de revenus. Rendu web inspecté sur ordinateur et à 375 px ; réservation complète rejouée avec l’API HTTP réelle. Scénario de répétition : [DEMONSTRATION.md](DEMONSTRATION.md).
+
+La [CI du code `2004bd8`](https://github.com/akouedekon/zem/actions/runs/38452787167) a réussi ses quatre jobs :
+
+- Backend : 14 tests passés (2 unitaires sur les jetons, 12 d’intégration sur PostgreSQL), migrations V1/V2/V3. Régression date au Bénin et contenu QR contrôlés ; le décodage d’une image QR générée ne valide pas une caméra physique.
+- Web : 3 tests de passerelle, TypeScript, build de production et audit npm de production au seuil high passés.
+- Mobile : analyse, 5 tests et deux compilations APK debug passées sous Linux. Artefacts `zem-android-debug-emulator` et `zem-android-pilot-render` disponibles dans ce run (rétention 7 jours). Le second pointe vers l’API Render ; celle-ci doit être déployée avec cette version.
+- Compose : démarrage PostgreSQL/API/web/Nginx, parcours navigateur complet, 24/24 sondes de sécurité actives ciblées, restauration de sauvegarde chiffrée isolée et configuration TLS avec certificat synthétique passés.
+
+Les sondes ont permis de corriger la transformation de certains refus HTTP 403 en 401 lors d’un dispatch d’erreur Spring. La route d’inscription passager est couverte par la limite d’authentification Nginx. Les tests partagent une IP et respectent les limites ; ces protections n’ont pas été supprimées.
+
+Ce n’est pas un pentest indépendant exhaustif. Aucun scan offensif des services publics, déploiement de cette version, test sur téléphone ni validation de charge nationale n’a été effectué. La compilation Android locale a rencontré des refus d’accès au cache Gradle ; les APK annoncés proviennent de la CI Linux réussie. Cette mise à jour documentaire décrit le code vérifié, sans modification fonctionnelle supplémentaire.
