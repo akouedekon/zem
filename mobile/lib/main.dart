@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'api.dart';
+import 'mobility.dart';
 
 void main() => runApp(ZemApp(api: ZemApi()));
 class ZemApp extends StatelessWidget {
@@ -28,6 +29,7 @@ class _DriverHomeState extends State<DriverHome> {
   Map<String, dynamic>? user, dossier, card;
   List<dynamic> docs = [];
   bool busy = true, register = false;
+  bool passenger = false;
   String? message;
   static const kinds = {'IDENTITY': 'Pièce d’identité', 'DRIVING_LICENSE': 'Permis de conduire', 'VEHICLE': 'Justificatif du véhicule'};
   static const statuses = {'DRAFT': 'Brouillon', 'SUBMITTED': 'En cours de revue', 'APPROVED': 'Validé', 'REJECTED': 'À corriger'};
@@ -73,23 +75,26 @@ class _DriverHomeState extends State<DriverHome> {
     appBar: AppBar(title: const Text('ZEM 2.0'), actions: [if (user != null && user!['role'] == 'DRIVER') IconButton(tooltip: 'Actualiser', onPressed: busy ? null : () => _action(_refresh), icon: const Icon(Icons.refresh)),
       if (user != null) IconButton(tooltip: 'Se déconnecter', onPressed: busy ? null : () => _action(() async { await widget.api.logout(); user = null; dossier = null; card = null; docs = []; password.clear(); }), icon: const Icon(Icons.logout))]),
     body: SafeArea(child: ListView(padding: const EdgeInsets.all(20), children: [
-      Text('Votre espace conducteur', style: Theme.of(context).textTheme.headlineMedium), const SizedBox(height: 12),
+      Text(user?['role'] == 'PASSENGER' ? 'Votre espace passager' : 'Votre espace conducteur', style: Theme.of(context).textTheme.headlineMedium), const SizedBox(height: 12),
       const Text('Version pilote. Aucune assurance ni paiement. Utilisez des données de démonstration.'), const SizedBox(height: 20),
       if (busy) const LinearProgressIndicator(),
       if (message != null) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text(message!, style: const TextStyle(fontWeight: FontWeight.bold))),
-      if (user == null) panel(register ? 'Créer un compte conducteur' : 'Se connecter', [
+      if (user == null) panel(register ? passenger ? 'Créer un compte passager' : 'Créer un compte conducteur' : 'Se connecter', [
+        if (register) SwitchListTile(title: const Text('Compte passager'), subtitle: const Text('Désactivé : compte conducteur'), value: passenger, onChanged: busy ? null : (v) => setState(() => passenger = v)),
         Form(key: authForm, child: Column(children: [
           field('Adresse e-mail', email, keyboard: TextInputType.emailAddress, maxLength: 254,
             validator: (v) => v == null || !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v.trim()) ? 'Adresse e-mail invalide' : null),
           field('Mot de passe', password, secret: true, maxLength: 72, validator: (v) => v == null || v.isEmpty || (register && v.length < 12) ? 'Mot de passe requis (12 caractères à l’inscription)' : null),
           FilledButton(onPressed: busy ? null : () { if (authForm.currentState!.validate()) { _action(() async {
-            user = await widget.api.login(email.text, password.text, register: register); password.clear();
+            user = await widget.api.login(email.text, password.text, register: register, passenger: passenger); password.clear();
             if (user!['role'] == 'DRIVER') await _refresh();
           }); } }, child: Text(register ? 'Créer le compte' : 'Se connecter')),
           TextButton(onPressed: busy ? null : () => setState(() { register = !register; message = null; }), child: Text(register ? 'J’ai déjà un compte' : 'Créer un compte conducteur')),
         ]))])
+      else if (user!['role'] == 'PASSENGER') panel('Mon espace passager', [FilledButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MobilityPage(api: widget.api, role: 'PASSENGER'))), child: const Text('Commander et suivre une course'))])
       else if (user!['role'] != 'DRIVER') panel('Compte administratif', [const Text('La revue administrative est disponible dans l’interface web ZEM.')])
       else ...[
+        panel('Mon activité', [FilledButton(onPressed: busy ? null : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MobilityPage(api: widget.api, role: 'DRIVER'))), child: const Text('Courses, service et revenus'))]),
         panel('Mon dossier · ${statuses[dossier?['status']] ?? 'Brouillon'}', [
           if (dossier?['rejectionReason'] != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text('Motif : ${dossier!['rejectionReason']}')),
           Form(key: profileForm, child: Column(children: [

@@ -34,3 +34,9 @@ Configurations Render Free et Netlify Free ajoutées, PostgreSQL Neon Free prév
 Tests backend relancés localement : 8 passés sur PostgreSQL réel, migrations V1/V2 appliquées. Les deux tests ajoutés vérifient lecture après recréation du service, accès du propriétaire, remplacement et conservation à quota atteint. Les résultats CI historiques ci-dessus précèdent cette adaptation ; aucun déploiement Render/Netlify/Neon n’est revendiqué. Voir [FREE_HOSTING.md](FREE_HOSTING.md).
 
 Web : 3 tests et TypeScript passés après adaptation. Flutter : analyse sans problème et 4 tests passés. L’APK émulateur fourni auparavant reste celui de la version précédente ; il doit être recompilé pour l’URL gratuite effective.
+
+## Courses et activité — 13 octobre 2026
+
+Première tranche de mobilité implémentée dans le code : compte passager, demande de course, service conducteur avec position récente, acceptation concurrente, démarrage/fin/annulation, recettes de course déclarées, déclarations hors ZEM et charges facultatives. L’administration dispose d’agrégats et d’un tableau par conducteur. Web Next.js et mobile Flutter Android reliés à ces API. Aucun paiement, assurance ou service payant ajouté. Détails et limites : [MOBILITY.md](MOBILITY.md).
+
+Contrôles locaux : 11 tests backend passés avec PostgreSQL réel et migrations V1/V2/V3 ; 3 tests de passerelle web et build Next.js/TypeScript passés ; 5 tests Flutter passés, analyse sans problème. Le parcours navigateur est passé contre l’API HTTP réelle : dossier/rejet/correction/validation, réservation passager, GPS simulé avec permission, acceptation, démarrage, recette de fin, remise hors service, reçu, vérification du tableau administratif par conducteur, carte et révocation. Le GPS physique n’est pas testé. Aucun déploiement de cette tranche n’est revendiqué.

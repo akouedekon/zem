@@ -1,11 +1,11 @@
 export function allowedPath(path, method) {
   const uuid = '[0-9a-fA-F-]{36}';
   const rules = {
-    GET: ['auth/me', 'driver/dossier', 'driver/documents', 'driver/card', 'driver/card/qr', 'admin/dossiers',
+    GET: ['auth/me', 'driver/dossier', 'driver/documents', 'driver/card', 'driver/card/qr', 'admin/dossiers', 'passenger/rides', 'driver/rides', 'driver/requests', 'driver/service', 'driver/earnings', 'admin/mobility', 'admin/activity', `rides/${uuid}/location`,
       `documents/${uuid}`, `admin/dossiers/${uuid}`, `admin/dossiers/${uuid}/documents`, `admin/dossiers/${uuid}/audit`, 'public/cards/[A-Za-z0-9_-]{43}'],
-    POST: ['auth/login', 'auth/register', 'auth/logout', 'driver/dossier/submit', 'driver/documents/(IDENTITY|DRIVING_LICENSE|VEHICLE)',
+    POST: ['auth/login', 'auth/register', 'auth/register-passenger', 'auth/logout', 'driver/dossier/submit', 'driver/documents/(IDENTITY|DRIVING_LICENSE|VEHICLE)', 'passenger/rides', `driver/rides/${uuid}/(accept|start|complete)`, `rides/${uuid}/cancel`,
       `admin/dossiers/${uuid}/decision`, `admin/dossiers/${uuid}/revoke`],
-    PUT: ['driver/dossier']
+    PUT: ['driver/dossier', 'driver/service', 'driver/declarations']
   };
   return (rules[method] || []).some(rule => new RegExp(`^${rule}$`).test(path));
 }

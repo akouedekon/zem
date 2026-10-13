@@ -23,6 +23,9 @@ public class ApiController {
         return ResponseEntity.status(201).body(auth.register(req));
     }
     @PostMapping("/auth/login") Auth login(@Valid @RequestBody Login req) { return auth.login(req); }
+    @PostMapping("/auth/register-passenger") ResponseEntity<User> passenger(@Valid @RequestBody Register req) {
+        return ResponseEntity.status(201).body(auth.registerPassenger(req));
+    }
     @GetMapping("/auth/me") User me(@AuthenticationPrincipal User user) { return user; }
     @PostMapping("/auth/logout") ResponseEntity<Void> logout(@RequestHeader("Authorization") String header) {
         auth.logout(header.substring(7)); return ResponseEntity.noContent().build();

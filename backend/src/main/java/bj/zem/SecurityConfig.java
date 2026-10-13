@@ -29,7 +29,8 @@ public class SecurityConfig {
         return http.csrf(csrf->csrf.disable()).cors(cors->cors.disable())
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a->a
-                .requestMatchers("/api/auth/register","/api/auth/login","/api/public/**","/api/health").permitAll()
+                .requestMatchers("/api/auth/register","/api/auth/register-passenger","/api/auth/login","/api/public/**","/api/health").permitAll()
+                .requestMatchers("/api/passenger/**").hasRole("PASSENGER")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/driver/**").hasRole("DRIVER")
                 .anyRequest().authenticated())

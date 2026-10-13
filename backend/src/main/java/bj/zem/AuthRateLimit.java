@@ -26,7 +26,7 @@ public class AuthRateLimit extends OncePerRequestFilter {
         return ++w.count<=20;
     }
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws ServletException,IOException {
-        if(req.getMethod().equals("POST") && (req.getRequestURI().equals("/api/auth/login") || req.getRequestURI().equals("/api/auth/register")) && !allowed(req.getRemoteAddr())) {
+        if(req.getMethod().equals("POST") && (req.getRequestURI().equals("/api/auth/login") || req.getRequestURI().equals("/api/auth/register") || req.getRequestURI().equals("/api/auth/register-passenger")) && !allowed(req.getRemoteAddr())) {
             res.setStatus(429); res.setHeader("Retry-After","60"); res.setContentType("application/json");
             res.getWriter().write("{\"message\":\"Trop de tentatives, réessayez dans une minute\"}"); return;
         }
