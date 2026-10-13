@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -15,6 +16,18 @@ class MemoryStore implements SessionStore {
   Future<void> clear() async { token = null; }
 }
 void main() {
+  test('accepts 4 MiB uploads and rejects larger files before sending', () async {
+    var sent = 0;
+    final api = ZemApi(store: MemoryStore(), client: MockClient((req) async {
+      sent++;
+      expect(req.bodyBytes.length, greaterThan(4 * 1024 * 1024));
+      return http.Response('{}', 200);
+    }));
+    await api.upload('IDENTITY', 'boundary.pdf', Uint8List(4 * 1024 * 1024));
+    await expectLater(api.upload('IDENTITY', 'oversize.pdf', Uint8List(4 * 1024 * 1024 + 1)), throwsA(isA<ApiException>()));
+    expect(sent, 1);
+    api.close();
+  });
   testWidgets('shows real login and pilot notice without a session', (tester) async {
     await tester.pumpWidget(ZemApp(api: ZemApi(store: MemoryStore(), client: MockClient((_) async => http.Response('{}', 500)))));
     await tester.pumpAndSettle();

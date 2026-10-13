@@ -55,3 +55,9 @@ La [CI du code `2004bd8`](https://github.com/akouedekon/zem/actions/runs/3845278
 Les sondes ont permis de corriger la transformation de certains refus HTTP 403 en 401 lors d’un dispatch d’erreur Spring. La route d’inscription passager est couverte par la limite d’authentification Nginx. Les tests partagent une IP et respectent les limites ; ces protections n’ont pas été supprimées.
 
 Ce n’est pas un pentest indépendant exhaustif. Aucun scan offensif des services publics, déploiement de cette version, test sur téléphone ni validation de charge nationale n’a été effectué. La compilation Android locale a rencontré des refus d’accès au cache Gradle ; les APK annoncés proviennent de la CI Linux réussie. Cette mise à jour documentaire décrit le code vérifié, sans modification fonctionnelle supplémentaire.
+
+### Justificatifs de 4 Mo — 13 octobre 2026
+
+Limite portée à 4 Mio (4 194 304 octets) par document sur le web, Flutter et l’API. Flyway V4 augmente la contrainte PostgreSQL ; les migrations déjà appliquées restent inchangées. La passerelle réserve 256 Kio supplémentaires au multipart, sous le plafond binaire Netlify. Le budget global reste de 150 Mio.
+
+Vérification locale : 15 tests backend passés sur PostgreSQL réel avec V1 à V4, dont acceptation de 4 Mio et refus de remplacement au-delà sans perte ; 4 tests web et build Next.js/TypeScript passés ; analyse Flutter sans problème et 6 tests passés. Le parcours navigateur complet est passé avec un justificatif de 4 Mio transmis à l’API HTTP réelle. Aucun déploiement ni test de cette version sur téléphone n’est revendiqué. Fusionner puis redéployer Render et Netlify, et installer l’APK recompilé pour activer la nouvelle limite partout.

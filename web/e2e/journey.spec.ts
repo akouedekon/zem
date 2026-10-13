@@ -32,7 +32,9 @@ test('driver submission, administrative rejection, correction, approval and publ
   await page.getByRole('button', { name: 'Enregistrer le dossier' }).click();
   await expect(page.getByRole('status')).toContainText('Dossier enregistré');
   for (const label of ['Pièce d’identité', 'Permis de conduire', 'Justificatif du véhicule']) {
-    await page.getByLabel(label, { exact: true }).setInputFiles({ name: 'synthetic.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nsynthetic e2e document') });
+    const buffer = label === 'Pièce d’identité' ? Buffer.alloc(4 * 1024 * 1024, 32) : Buffer.from('%PDF-1.4\nsynthetic e2e document');
+    if (label === 'Pièce d’identité') buffer.write('%PDF-1.4\nsynthetic 4 MiB boundary');
+    await page.getByLabel(label, { exact: true }).setInputFiles({ name: 'synthetic.pdf', mimeType: 'application/pdf', buffer });
     await expect(page.getByRole('status')).toContainText('Justificatif enregistré');
   }
   await page.getByRole('button', { name: 'Soumettre à la revue' }).click(); await expect(page.getByText('En cours de revue', { exact: true })).toBeVisible();

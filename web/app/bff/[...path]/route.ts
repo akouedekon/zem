@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { allowedPath, sameOrigin, readLimitedBody } from '@/lib/bff-policy.mjs';
+import { allowedPath, sameOrigin, readLimitedBody, maxRequestBytes } from '@/lib/bff-policy.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,9 +19,9 @@ async function handle(req: NextRequest, context: { params: Promise<{ path: strin
   const type = req.headers.get('content-type');
   if (type) headers.set('Content-Type', type);
   const declaredLength = Number(req.headers.get('content-length') || 0);
-  if (declaredLength > 4 * 1024 * 1024) return NextResponse.json({ message: 'Fichier trop volumineux' }, { status: 413 });
+  if (declaredLength > maxRequestBytes) return NextResponse.json({ message: 'Document trop volumineux (4 Mo maximum)' }, { status: 413 });
   let body: ArrayBuffer | undefined;
-  try { body = method === 'GET' ? undefined : await readLimitedBody(req.body, 4 * 1024 * 1024); }
+  try { body = method === 'GET' ? undefined : await readLimitedBody(req.body, maxRequestBytes); }
   catch (e) { return NextResponse.json({ message: e instanceof RangeError ? 'Fichier trop volumineux' : 'Corps de requête invalide' }, { status: e instanceof RangeError ? 413 : 400 }); }
   let response: Response;
   try {

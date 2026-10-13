@@ -98,12 +98,12 @@ export default function Home() {
         </fieldset></form>
         {!editable && <p className="muted">Le dossier est figé pendant la revue et après validation.</p>}
       </section>
-      <section className="panel"><h2>Mes justificatifs</h2><p className="muted">PDF, JPEG ou PNG · 3 Mo maximum par fichier. Accès privé.</p>
+      <section className="panel"><h2>Mes justificatifs</h2><p className="muted">PDF, JPEG ou PNG · 4 Mo maximum par fichier. Accès privé.</p>
         {Object.entries(kinds).map(([kind, label]) => { const doc = docs.find(d => d.kind === kind); return <div className="document" key={kind}>
           <strong>{label}</strong>{doc ? <a href={`/bff/documents/${doc.id}`}>Télécharger le document</a> : <span className="muted">À ajouter</span>}
           <label className="file-label">{doc ? 'Remplacer' : 'Choisir le document'}<input type="file" aria-label={label} accept="application/pdf,image/jpeg,image/png" disabled={busy || !editable || !dossier} onChange={e => {
             const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
-            if (file.size > 3 * 1024 * 1024) { setMessage('Document trop volumineux (3 Mo maximum)'); return; }
+            if (file.size > 4 * 1024 * 1024) { setMessage('Document trop volumineux (4 Mo maximum)'); return; }
             const form = new FormData(); form.set('file', file);
             action(async () => { await api(`driver/documents/${kind}`, 'POST', form); await refresh(user); setMessage('Justificatif enregistré.'); });
           }} /></label></div>; })}

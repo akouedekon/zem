@@ -42,6 +42,21 @@ class MvpIntegrationTest {
     @Autowired AuthService auth;
     @Autowired DossierService dossiers;
     @Autowired MobilityService mobility;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    @Test void fourMiBDocumentPersistsAndOversizeReplacementIsRejected() throws Exception {
+        draft();
+        var storage = new DossierService(db,System.getProperty("java.io.tmpdir")+"/zem-boundary","http://localhost:3000","database",6L*1024*1024);
+        byte[] bytes=new byte[4*1024*1024];
+        System.arraycopy("%PDF-1.4\n".getBytes(StandardCharsets.UTF_8),0,bytes,0,9);
+        var doc=new org.springframework.transaction.support.TransactionTemplate(transactions).execute(status -> {
+            try { return storage.upload(driver.user(),"IDENTITY",new MockMultipartFile("file","boundary.pdf","application/pdf",bytes)); }
+            catch(java.io.IOException ex) { throw new java.io.UncheckedIOException(ex); }
+        });
+        assertThat(storage.download(doc.id(),driver.user()).bytes()).isEqualTo(bytes);
+        mvc.perform(multipart("/api/driver/documents/IDENTITY").file(new MockMultipartFile("file","too-large.pdf","application/pdf",Arrays.copyOf(bytes,bytes.length+1)))
+            .header("Authorization",bearer(driver))).andExpect(status().isPayloadTooLarge());
+        assertThat(storage.download(doc.id(),driver.user()).bytes()).isEqualTo(bytes);
+    }
     Auth driver,other,admin;
     @BeforeEach void fixtures() {
         db.execute("TRUNCATE mobility_audit,ride,driver_service,activity_declaration CASCADE");
@@ -181,7 +196,7 @@ class MvpIntegrationTest {
         assertThat(dossiers.verify(c.publicToken()).valid()).isFalse();
         assertThat(dossiers.verify(c.publicToken()).status()).isEqualTo("EXPIRED");
         mvc.perform(get("/api/public/cards/not-a-token")).andExpect(status().isNotFound());
-        assertThat(db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success=true",Integer.class)).isEqualTo(3);
+        assertThat(db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success=true",Integer.class)).isEqualTo(4);
     }
     @Test void databaseDocumentsSurviveServiceRecreationAndReplacement() throws Exception {
         Dossier d=draft(); byte[] first="%PDF-first".getBytes(StandardCharsets.UTF_8);

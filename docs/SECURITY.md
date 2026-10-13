@@ -5,7 +5,7 @@
 - Spring Security contrôle les rôles et chaque téléchargement vérifie le propriétaire ou l’administration.
 - BCrypt coût 12, jetons aléatoires 256 bits, empreintes SHA-256 seules en base, expiration 8 h et révocation à la déconnexion. Pas de Basic Auth ni compte de démonstration dans l’image de production.
 - Web : cookie HttpOnly, SameSite=Strict, Secure avec origine HTTPS ; contrôle d’Origin sur toute mutation, routes BFF explicitement autorisées, aucun stockage local du jeton. API sans cookies et sans CORS ; Flutter utilise un bearer conservé dans le stockage sécurisé du système.
-- Justificatifs nouveaux privés dans PostgreSQL, écriture atomique avec métadonnées, budget global verrouillé de 150 Mio. PDF/JPEG/PNG identifiés par signature, plafond 3 Mio, téléchargements en pièce jointe et `nosniff`. Le mode fichiers historique reste disponible localement.
+- Justificatifs nouveaux privés dans PostgreSQL, écriture atomique avec métadonnées, budget global verrouillé de 150 Mio. PDF/JPEG/PNG identifiés par signature, plafond 4 Mio, téléchargements en pièce jointe et `nosniff`. Le mode fichiers historique reste disponible localement.
 - Verrouillage PostgreSQL des transitions et journal des soumissions, décisions et révocations dans la transaction. Aucun endpoint d’édition/suppression du journal.
 - QR opaque, réponse publique minimale et non mise en cache. Expiration et révocation contrôlées à chaque vérification.
 - Compose local : API et web non-root, système en lecture seule, capacités retirées, PostgreSQL et API sans ports publiés. Pilote gratuit : API HTTPS publique sur Render, web HTTPS sur Netlify, PostgreSQL privé avec TLS sur Neon. Les accès aux pièces restent contrôlés côté API ; le limiteur Nginx local ne protège pas l’API distante.

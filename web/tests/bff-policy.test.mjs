@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allowedPath, sameOrigin, readLimitedBody } from '../lib/bff-policy.mjs';
+import { allowedPath, sameOrigin, readLimitedBody, maxRequestBytes } from '../lib/bff-policy.mjs';
+test('4 MiB multipart fits but requests above the envelope are cancelled', async () => {
+  const multipart = new FormData(); multipart.set('file', new Blob([new Uint8Array(4 * 1024 * 1024)], {type:'application/pdf'}), 'document.pdf');
+  const req = new Request('http://localhost/upload', {method:'POST', body:multipart});
+  const payload = await readLimitedBody(req.body, maxRequestBytes);
+  assert.ok(payload.byteLength > 4 * 1024 * 1024);
+  assert.ok(payload.byteLength < maxRequestBytes);
+  let cancelled=false;
+  const over = new ReadableStream({ start(c) { c.enqueue(new Uint8Array(maxRequestBytes + 1)); }, cancel() {cancelled=true;} });
+  await assert.rejects(readLimitedBody(over, maxRequestBytes), RangeError);
+  assert.equal(cancelled,true);
+});
 test('BFF only forwards known API paths and methods', () => {
   assert.equal(allowedPath('driver/dossier', 'PUT'), true);
   assert.equal(allowedPath('auth/login', 'POST'), true);
