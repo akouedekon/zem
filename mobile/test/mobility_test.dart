@@ -36,6 +36,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    final landmark = find.widgetWithText(ActionChip, 'Marché Dantokpa');
+    await tester.ensureVisible(landmark); await tester.tap(landmark); await tester.pumpAndSettle();
+    final destinationInput = find.widgetWithText(TextFormField, 'Destination');
+    await tester.ensureVisible(destinationInput); await tester.enterText(destinationInput, 'Autre destination');
+    expect(tester.widget<TextFormField>(find.widgetWithText(TextFormField, 'Latitude de destination')).controller!.text, isEmpty);
     for (final entry in {
       'Lieu de départ': 'Étoile Rouge',
       'Latitude de départ': '6.36',

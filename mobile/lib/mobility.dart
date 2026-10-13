@@ -181,10 +181,12 @@ class _MobilityPageState extends State<MobilityPage>
     bool number = false,
     bool optional = false,
     double? bound,
+    ValueChanged<String>? onChanged,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextFormField(
       controller: c,
+      onChanged: onChanged,
       enabled: !busy,
       decoration: InputDecoration(labelText: label),
       keyboardType: number
@@ -320,7 +322,7 @@ class _MobilityPageState extends State<MobilityPage>
                     })),
                   ]),
                   const Text('Repères approximatifs : confirmez le point de rendez-vous.'),
-                  field('Destination', destination),
+                  field('Destination', destination, onChanged: (_) { destLat.clear(); destLon.clear(); }),
                   field(
                     'Latitude de destination',
                     destLat,

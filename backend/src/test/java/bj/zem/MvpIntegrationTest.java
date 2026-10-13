@@ -61,6 +61,11 @@ class MvpIntegrationTest {
     }
     Auth passenger() { auth.registerPassenger(new Register("passenger@zem.test","Passenger-test-password-17")); return auth.login(new Login("passenger@zem.test","Passenger-test-password-17")); }
     MobilityController.Booking booking() { return new MobilityController.Booking("Étoile Rouge","Dantokpa",6.36,2.40,6.37,2.43); }
+    @Test void declarationsUseBeninDateAndRejectFutureDays() throws Exception {
+        var day=java.time.LocalDate.now(java.time.ZoneId.of("Africa/Porto-Novo"));
+        mvc.perform(put("/api/driver/declarations").header("Authorization",bearer(driver)).contentType("application/json").content(json.writeValueAsString(new MobilityController.Declaration(day,0,0,null)))).andExpect(status().isOk());
+        mvc.perform(put("/api/driver/declarations").header("Authorization",bearer(driver)).contentType("application/json").content(json.writeValueAsString(new MobilityController.Declaration(day.plusDays(1),0,0,null)))).andExpect(status().isBadRequest());
+    }
     @Test void mobilityFullJourneyAndRevenueProvenance() throws Exception {
         Auth p=passenger();Dossier d=submitted();dossiers.decide(d.id(),admin.user(),new Decision(true,null));
         mobility.availability(driver.user(),new MobilityController.Availability(true,6.36,2.40));

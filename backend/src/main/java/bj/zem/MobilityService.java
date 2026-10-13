@@ -80,6 +80,7 @@ public class MobilityService {
         return rows.get(0);
     }
     @Transactional public Map<String,Object> declare(User u,Declaration d) {
+        if(d.day().isAfter(LocalDate.now(java.time.ZoneId.of("Africa/Porto-Novo")))) throw new ResponseStatusException(BAD_REQUEST,"La journée ne peut pas être future au Bénin");
         db.update("INSERT INTO activity_declaration(driver_id,day,off_platform_revenue,off_platform_rides,expenses) VALUES (?,?,?,?,?) ON CONFLICT(driver_id,day) DO UPDATE SET off_platform_revenue=excluded.off_platform_revenue,off_platform_rides=excluded.off_platform_rides,expenses=excluded.expenses,updated_at=now()",u.id(),d.day(),d.offPlatformRevenue(),d.offPlatformRides(),d.expenses());
         return earnings(u.id(),d.day());
     }

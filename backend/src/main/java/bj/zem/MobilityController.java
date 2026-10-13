@@ -21,7 +21,7 @@ public class MobilityController {
     public record Availability(@NotNull Boolean online,@DecimalMin("-90") @DecimalMax("90") Double latitude,
         @DecimalMin("-180") @DecimalMax("180") Double longitude) {}
     public record Fare(@NotNull @Min(0) @Max(1000000) Long amount) {}
-    public record Declaration(@NotNull @PastOrPresent LocalDate day,@Min(0) @Max(1000000) long offPlatformRevenue,
+    public record Declaration(@NotNull LocalDate day,@Min(0) @Max(1000000) long offPlatformRevenue,
         @Min(0) @Max(1000) int offPlatformRides,@Min(0) @Max(1000000) Long expenses) {}
     @PostMapping("/passenger/rides") @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     Map<String,Object> book(@AuthenticationPrincipal User u,@Valid @RequestBody Booking b) { return mobility.book(u,b); }
